@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: mongo_thesis
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_thesis_data:/data/db
+
+volumes:
+  mongo_thesis_data:
+    external: true
+    name: mongo_thesis_data
