@@ -9,7 +9,7 @@ if __name__ == "__main__":
     print(f"[{collection_name}] queries:", len(queries))
     print(f"[{collection_name}] qrels:", len(qrels))
 
-    # Δείξε 1-2 για sanity check
+    # Δείξε 1-2 για test
     if docs:
         print("\nExample doc:", docs[0]["id"], "->", docs[0]["text"][:80], "...")
     if queries:

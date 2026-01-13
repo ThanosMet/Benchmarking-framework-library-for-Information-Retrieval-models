@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     print("Inserted:", stats)
 
-    # Διαβάζουμε πίσω από τη Mongo για sanity check
+    # Διαβάζουμε πίσω από τη Mongo για test
     db = get_db()
     docs_col = db["Documents"]
     queries_col = db["Queries"]
