@@ -1,4 +1,4 @@
-# src/irlib/datasets/mongo_loader.py
+# src/irlib/datasets_insert/mongo_loader.py
 from typing import List, Dict, Tuple, Optional
 
 from irlib.utils.mongo import get_db

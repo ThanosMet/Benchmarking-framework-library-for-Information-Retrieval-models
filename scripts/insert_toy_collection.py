@@ -1,4 +1,4 @@
-from irlib.datasets.mongo_ingest import ingest_collection
+from irlib.datasets_insert.mongo_ingest import ingest_collection
 from irlib.utils.mongo import get_db
 
 
