@@ -1,7 +1,7 @@
 from irlib.datasets_insert.mongo_loader import load_collection
 
 if __name__ == "__main__":
-    collection_name = "toy_demo"   # ή "CF" ή ό,τι έχεις βάλει στο ingest
+    collection_name = "CF"   # ή "CF" ή ό,τι έχεις βάλει στο ingest
 
     docs, queries, qrels = load_collection(collection_name)
 
