@@ -1,7 +1,7 @@
 # src/irlib/datasets_insert/mongo_loader.py
 from typing import List, Dict, Tuple, Optional
 
-from irlib.utils.mongo import get_db
+from irlib.utilities.mongo import get_db
 
 
 def load_collection(

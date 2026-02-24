@@ -1,6 +1,6 @@
 from typing import List, Dict, Optional
 
-from irlib.utils.mongo import get_db
+from irlib.utilities.mongo import get_db
 
 
 def _normalize_documents(

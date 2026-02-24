@@ -1,4 +1,4 @@
-from irlib.utils.mongo import get_db
+from irlib.utilities.mongo import get_db
 
 if __name__ == "__main__":
     db = get_db()
