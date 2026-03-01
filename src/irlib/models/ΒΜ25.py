@@ -39,9 +39,18 @@ class BM25Model(Model):
     def __init__(self, collection):
         super().__init__(collection)
 
+
+    # προσθήκη stopwords parameter για συμβατότητα με runner
     def fit(self, queries=None, min_freq=None, stopwords=False):
+        if queries is None:
+            queries = self._queries
+
+        # φιλτράρισμα stopwords στα queries
         if stopwords:
-            queries = [[w for w in q if w not in self.collection.stopwords] for q in queries]
+            queries = [
+                [w for w in q if w not in self.collection.stopwords]
+                for q in queries
+            ]
 
         prev_doc = self.collection.docs[0]
         text = [prev_doc.terms]
