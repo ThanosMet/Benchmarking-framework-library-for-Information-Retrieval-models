@@ -66,7 +66,7 @@ def main():
         print(f"  Run {i + 1} / {args.runs}")
         print(f"{'─'*40}")
 
-        model = BM25(col)
+        model = BM25Model(col)
         model.fit(stopwords=args.stopwords)
         model.evaluate(k=args.k)
 
