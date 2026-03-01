@@ -12,14 +12,15 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from numpy import mean, std
+from pandas import DataFrame
+
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_PROJECT_ROOT / "src" / "irlib"))
 
-from numpy import mean, std
-from pandas import DataFrame
 
-from models.BM25Model import BM25
+from models.BM25 import BM25Model
 from utilities.Result_handling import res_to_excel, write
 from irlib.collection_builder import build_collection_from_mongo
 
