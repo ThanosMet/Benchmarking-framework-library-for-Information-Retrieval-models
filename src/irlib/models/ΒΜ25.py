@@ -23,9 +23,9 @@ def dubg(a, b):
 
 class BM25Model(Model):
 
-    @staticmethod
+
     def get_model(self):
-        return __class__.__name__
+        return self.__class__.__name__
 
     def _model_func(self, **kwargs):
         pass
@@ -39,9 +39,9 @@ class BM25Model(Model):
     def __init__(self, collection):
         super().__init__(collection)
 
-    def fit(self, queries=None, min_freq=None):
-        if queries is None:
-            queries = self._queries
+    def fit(self, queries=None, min_freq=None, stopwords=False):
+        if stopwords:
+            queries = [[w for w in q if w not in self.collection.stopwords] for q in queries]
 
         prev_doc = self.collection.docs[0]
         text = [prev_doc.terms]
