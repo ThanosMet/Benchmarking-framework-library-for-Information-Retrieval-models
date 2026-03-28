@@ -5,6 +5,8 @@ Flask API για το IR Benchmarking framework.
 Εκκίνηση:
     python src/irlib/api/app.py
 
+    powershell command example: Invoke-WebRequest -Uri "http://127.0.0.1:5000/run" -Method POST -ContentType "application/json" -Body '{"model": "BM25", "collection": "CF", "runs": 1}'
+
 Endpoints:
     GET  /collections       → διαθέσιμες συλλογές στη MongoDB
     GET  /models            → διαθέσιμα μοντέλα
