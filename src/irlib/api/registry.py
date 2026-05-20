@@ -11,14 +11,15 @@ Model Registry — ο κατάλογος όλων των διαθέσιμων μ
 from models.GSB import GSBModel
 from models.BM25 import BM25Model
 from models.GoW import Gow
-# Όταν προσθέσεις νέα μοντέλα, απλώς κάνε import εδώ:
-# from models.NewModel import NewModel
+from models.SetBased import SetBasedModel
+from models.WindowedGSB import WindowedGSBModel
 
 REGISTRY = {
-    "GSB":  GSBModel,
-    "BM25": BM25Model,
-    "GOW":  Gow,
-    # "NEW":  NewModel,
+    "GSB":         GSBModel,
+    "BM25":        BM25Model,
+    "GOW":         Gow,
+    "SETBASED":    SetBasedModel,
+    "WINDOWEDGSB": WindowedGSBModel,
 }
 
 

@@ -10,6 +10,7 @@ Flask API για το IR Benchmarking framework.
 Endpoints:
     GET  /collections       → διαθέσιμες συλλογές στη MongoDB
     GET  /models            → διαθέσιμα μοντέλα
+    GET  /model_params      → παράμετροι ανά μοντέλο
     POST /run               → τρέχει ένα μοντέλο
     POST /compare           → τρέχει πολλά μοντέλα και συγκρίνει
     GET  /results           → αποθηκευμένα αποτελέσματα από τη MongoDB
@@ -29,21 +30,41 @@ from numpy import mean, std
 
 from irlib.collection_builder import build_collection_from_mongo
 from irlib.utilities.mongo import get_db
+from utilities.mongo import get_db
 from irlib.api.registry import get_model_class, list_models
 
 app = Flask(__name__)
+
+# Μοντέλα που δέχονται window parameter
+_WINDOWED_MODELS = {"WINDOWEDGSB"}
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _build_model(model_name: str, col, extra_params: dict):
+    """Αρχικοποιεί το σωστό μοντέλο με τις κατάλληλες παραμέτρους."""
+    ModelClass = get_model_class(model_name)
+
+    if model_name in _WINDOWED_MODELS:
+        window = extra_params.get("window", 8)
+        # Αν window είναι float string π.χ. "0.3" -> float, αλλιώς int
+        try:
+            window = float(window) if "." in str(window) else int(window)
+        except (ValueError, TypeError):
+            window = 8
+        return ModelClass(col, window=window)
+
+    return ModelClass(col)
+
+
 def _run_single(model_name: str, collection_name: str,
-                runs: int, k, stopwords: bool, min_freq: int) -> dict:
     """Τρέχει ένα μοντέλο N φορές και επιστρέφει αποτελέσματα."""
+                runs: int, k, stopwords: bool,
+                min_freq: int, extra_params: dict) -> dict:
 
     col = build_collection_from_mongo(collection_name)
-    ModelClass = get_model_class(model_name)
 
     map_scores = []
     all_precision = []
@@ -51,7 +72,7 @@ def _run_single(model_name: str, collection_name: str,
     total_start = time.time()
 
     for i in range(runs):
-        model = ModelClass(col)
+        model = _build_model(model_name, col, extra_params)
         model.fit(min_freq=min_freq, stopwords=stopwords)
         model.evaluate(k=k)
         map_scores.append(float(mean(model.precision)))
@@ -70,16 +91,14 @@ def _run_single(model_name: str, collection_name: str,
         "precision":   all_precision,
         "recall":      all_recall,
         "elapsed_sec": elapsed,
+        "params":      extra_params,
     }
 
 
 def _save_result(result: dict):
     """Αποθηκεύει αποτέλεσμα στη MongoDB."""
     db = get_db()
-    db["Results"].insert_one({
-        **result,
-        "timestamp": time.time(),
-    })
+    db["Results"].insert_one({**result, "timestamp": time.time()})
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +121,28 @@ def get_collections():
 def get_models():
     """Επιστρέφει τα διαθέσιμα μοντέλα από το registry."""
     return jsonify({"models": list_models()})
+
+
+# ---------------------------------------------------------------------------
+# GET /model_params  — ποιες extra παράμετροι δέχεται κάθε μοντέλο
+# ---------------------------------------------------------------------------
+
+@app.route("/model_params", methods=["GET"])
+def get_model_params():
+    """
+    Επιστρέφει τις extra παραμέτρους ανά μοντέλο ώστε το UI να τις εμφανίζει δυναμικά.
+    """
+    params = {
+        "GSB":         [],
+        "BM25":        [],
+        "GOW":         [],
+        "SETBASED":    [],
+        "WINDOWEDGSB": [
+            {"name": "window", "type": "number", "default": 8,
+             "help": "Window size: int για fixed, float (0-1) για ποσοστό"}
+        ],
+    }
+    return jsonify(params)
 
 
 # ---------------------------------------------------------------------------
@@ -135,10 +176,11 @@ def run_model():
     stopwords       = bool(data.get("stopwords", True))
     min_freq        = int(data.get("min_freq", 1))
     save            = bool(data.get("save", False))
+    extra_params    = data.get("params", {})
 
     try:
         result = _run_single(model_name, collection_name,
-                             runs, k, stopwords, min_freq)
+                             runs, k, stopwords, min_freq, extra_params)
         if save:
             _save_result(result)
         return jsonify(result)
@@ -177,6 +219,7 @@ def compare_models():
     stopwords       = bool(data.get("stopwords", True))
     min_freq        = int(data.get("min_freq", 1))
     save            = bool(data.get("save", False))
+    extra_params    = data.get("params", {})
 
     results = {}
     errors  = {}
@@ -184,7 +227,7 @@ def compare_models():
     for model_name in models_list:
         try:
             r = _run_single(model_name, collection_name,
-                            runs, k, stopwords, min_freq)
+                            runs, k, stopwords, min_freq, extra_params)
             results[model_name] = r
             if save:
                 _save_result(r)
@@ -213,7 +256,6 @@ def get_results():
         limit      : max αποτελέσματα (default: 20)
     """
     db = get_db()
-
     query = {}
     if request.args.get("model"):
         query["model"] = request.args["model"].upper()
@@ -221,10 +263,8 @@ def get_results():
         query["collection"] = request.args["collection"].upper()
 
     limit = int(request.args.get("limit", 20))
-
     cursor = db["Results"].find(query, {"_id": 0}).sort("timestamp", -1).limit(limit)
     results = list(cursor)
-
     return jsonify({"results": results, "count": len(results)})
 
 
