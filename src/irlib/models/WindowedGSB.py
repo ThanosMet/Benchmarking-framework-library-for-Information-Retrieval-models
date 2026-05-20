@@ -38,8 +38,16 @@ class WindowedGSBModel(GSBModel):
             window_size = self.window
         elif isinstance(self.window, float):
             window_size = int(self.window * len(document.terms))
-        # create windowed document
-        windowed_document = document.split_document(window_size, self.window_cut_off)
+        # Create windowed document (chunking the terms list manually)
+        windowed_document = []
+        terms_list = document.terms
+
+        for i in range(0, len(terms_list), window_size):
+            chunk = terms_list[i: i + window_size]
+            # Truncate (ignore) the last incomplete window if cut_off is True
+            if self.window_cut_off and len(chunk) < window_size:
+                continue
+            windowed_document.append(chunk)
         adj_matrix = zeros(shape=(len(document.tf), len(document.tf)), dtype=int)
         for segment in windowed_document:
             w_tf = calculate_tf(segment)

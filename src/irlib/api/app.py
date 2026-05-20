@@ -183,7 +183,9 @@ def run_model():
             _save_result(result)
         return jsonify(result)
     except KeyError as e:
-        return jsonify({"error": str(e)}), 400
+        print("KEY ERROR IN /run:", file=sys.stderr)
+        traceback.print_exc()
+        return jsonify({"error": f"KeyError: {str(e)}"}), 400
     except Exception as e:
         print("CRASH IN /run:", file=sys.stderr)
         traceback.print_exc()

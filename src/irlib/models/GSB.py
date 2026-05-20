@@ -53,7 +53,10 @@ class GSBModel(Model):
             temp = 1
             for term in termset:
                 if term in inverted_index:
-                    temp *= inverted_index[term]['nwk']
+                    # Use .get() to safely pull 'nwk'. Default to 1 (or 0) if missing.
+                    # I am using 1 so it doesn't zero out the multiplication (temp *= 1)
+                    nwk_score = inverted_index[term].get('nwk', 1.0)
+                    temp *= nwk_score
             tns[i] = round(temp, 3)
         return tns
 
