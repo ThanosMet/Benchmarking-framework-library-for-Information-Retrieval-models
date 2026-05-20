@@ -94,12 +94,14 @@ def page_run():
     # Φόρτωση επιλογών από API
     models_data = api_get("/models")
     collections_data = api_get("/collections")
+    params_data = api_get("/model_params")
 
     if not models_data or not collections_data:
         return
 
     models = models_data.get("models", [])
     collections = collections_data.get("collections", [])
+    model_params = params_data or {}
 
     # --- Φόρμα παραμέτρων ---
     with st.form("run_form"):
@@ -116,6 +118,19 @@ def page_run():
             min_freq = st.number_input("Min frequency (apriori)", min_value=1, value=1)
             save = st.checkbox("Αποθήκευση στη MongoDB", value=False)
 
+        # --- Δυναμικές παράμετροι ανά μοντέλο (π.χ. window για WindowedGSB) ---
+        extra_params = {}
+        extra_fields = model_params.get(model, [])
+        if extra_fields:
+            st.divider()
+            st.markdown(f"**Παράμετροι {model}**")
+            for field in extra_fields:
+                val = st.number_input(
+                    f"{field['name']} — {field['help']}",
+                    value=float(field["default"]),
+                )
+                extra_params[field["name"]] = val
+
         submitted = st.form_submit_button("▶️ Run", type="primary")
 
     if submitted:
@@ -127,6 +142,7 @@ def page_run():
             "stopwords": stopwords,
             "min_freq": min_freq,
             "save": save,
+            "params": extra_params,
         }
 
         with st.spinner(f"Τρέχει το {model} στη συλλογή {collection}..."):
@@ -235,6 +251,15 @@ def page_compare():
         k = st.number_input("Cutoff k (0 = όλα τα docs)", min_value=0, value=0)
         stopwords = st.checkbox("Stopwords", value=True)
 
+        # Window — εμφανίζεται μόνο αν WINDOWEDGSB είναι στην επιλογή
+        window = None
+        if "WINDOWEDGSB" in (selected_models or []):
+            st.divider()
+            window = st.number_input(
+                "Window size (για WINDOWEDGSB) — int για fixed, float (0-1) για ποσοστό",
+                value=8.0
+            )
+
         submitted = st.form_submit_button("▶️ Compare", type="primary")
 
     if submitted:
@@ -242,12 +267,17 @@ def page_compare():
             st.warning("Επίλεξε τουλάχιστον 2 μοντέλα.")
             return
 
+        extra_params = {}
+        if window is not None:
+            extra_params["window"] = window
+
         payload = {
             "models": selected_models,
             "collection": collection,
             "runs": runs,
             "k": k if k > 0 else None,
             "stopwords": stopwords,
+            "params": extra_params,
         }
 
         with st.spinner(f"Τρέχουν τα μοντέλα {', '.join(selected_models)}..."):
