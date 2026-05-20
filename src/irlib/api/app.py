@@ -18,6 +18,7 @@ Endpoints:
 
 import sys
 import time
+import traceback
 from pathlib import Path
 
 # Path setup — ώστε να βρίσκονται models, utilities, Preprocess
@@ -30,7 +31,6 @@ from numpy import mean, std
 
 from irlib.collection_builder import build_collection_from_mongo
 from irlib.utilities.mongo import get_db
-from utilities.mongo import get_db
 from irlib.api.registry import get_model_class, list_models
 
 app = Flask(__name__)
@@ -135,7 +135,6 @@ def get_model_params():
         "GSB":         [],
         "BM25":        [],
         "GOW":         [],
-        "SETBASED":    [],
         "WINDOWEDGSB": [
             {"name": "window", "type": "number", "default": 8,
              "help": "Window size: int για fixed, float (0-1) για ποσοστό"}
@@ -186,6 +185,8 @@ def run_model():
     except KeyError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
+        print("CRASH IN /run:", file=sys.stderr)
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
