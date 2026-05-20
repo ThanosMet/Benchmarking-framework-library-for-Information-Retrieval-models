@@ -58,9 +58,8 @@ def _build_model(model_name: str, col, extra_params: dict):
 
     return ModelClass(col)
 
-
+"""Τρέχει ένα μοντέλο N φορές και επιστρέφει αποτελέσματα."""
 def _run_single(model_name: str, collection_name: str,
-    """Τρέχει ένα μοντέλο N φορές και επιστρέφει αποτελέσματα."""
                 runs: int, k, stopwords: bool,
                 min_freq: int, extra_params: dict) -> dict:
 
