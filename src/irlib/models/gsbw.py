@@ -1,6 +1,6 @@
 from numpy import zeros
-from infre import metrics
-from infre.models import GSB
+from utilities import document_utls
+from models.GSB import GSBModel as GSB
 
 class GSBWindow(GSB):
     """
@@ -51,7 +51,11 @@ class GSBWindow(GSB):
             window_size = int(self.window * len(document.terms))
 
         # create windowed document
-        windowed_doc = document.split_document(window_size)
+        windowed_doc = []
+        terms_list = document.terms
+        for i in range(0, len(terms_list), window_size):
+            chunk = terms_list[i: i + window_size]
+            windowed_doc.append(chunk)
 
         adj_matrix = zeros(shape=(len(document.tf), len(document.tf)), dtype=int)
         for segment in windowed_doc:

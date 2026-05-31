@@ -3,10 +3,10 @@ from numpy import zeros
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 
-from infre.helpers.functions import cluster_optimization, cluster_graph, prune_graph
-from infre.metrics import precision_recall
-from infre.models import GSB
-from infre.tools import apriori
+from utilities.functions import cluster_optimization, cluster_graph, prune_graph
+from utilities.metrics import precision_recall
+from models.GSB import GSBModel as GSB
+from utilities import apriori
 
 
 class ConGSB(GSB):

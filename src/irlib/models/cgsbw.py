@@ -1,5 +1,6 @@
-from infre.helpers.functions import cluster_graph, prune_graph
-from infre.models import ConGSB, GSBWindow
+from utilities.functions import cluster_graph, prune_graph
+from models.cgsb import ConGSB
+from models.WindowedGSB import WindowedGSBModel as GSBWindow
 
 
 # IMPORTANT: due to __mro__, ConGSBWindow searches ConGSB methods first

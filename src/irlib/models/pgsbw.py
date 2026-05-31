@@ -1,5 +1,6 @@
-from infre.models import GSBWindow, BaseIRModel
-from infre.helpers.functions import prune_graph, cluster_graph
+from models.WindowedGSB import WindowedGSBModel as GSBWindow
+from models.Model import Model as BaseIRModel
+from utilities.functions import cluster_graph, prune_graph
 
 class PGSBW(GSBWindow, BaseIRModel):
     """

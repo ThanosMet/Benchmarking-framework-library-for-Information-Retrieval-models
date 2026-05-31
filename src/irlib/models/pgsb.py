@@ -1,5 +1,6 @@
-from infre.models import GSB, BaseIRModel
-from infre.helpers.functions import cluster_graph, prune_graph
+from models.GSB import GSBModel as GSB
+from models.Model import Model as BaseIRModel
+from utilities.functions import cluster_graph, prune_graph
 
 class PGSB(GSB, BaseIRModel):
     """

@@ -47,15 +47,42 @@ def _build_model(model_name: str, col, extra_params: dict):
     """Αρχικοποιεί το σωστό μοντέλο με τις κατάλληλες παραμέτρους."""
     ModelClass = get_model_class(model_name)
 
-    if model_name in _WINDOWED_MODELS:
-        window = extra_params.get("window", 8)
-        # Αν window είναι float string π.χ. "0.3" -> float, αλλιώς int
-        try:
-            window = float(window) if "." in str(window) else int(window)
-        except (ValueError, TypeError):
-            window = 8
+    # 1. Parse Window safely
+    window = extra_params.get("window", 8)
+    try:
+        window = float(window) if "." in str(window) else int(window)
+    except (ValueError, TypeError):
+        window = 8
+
+    # 2. Parse Clusters safely
+    clusters = int(extra_params.get("clusters", 5))
+
+    # 3. Parse Condition safely (assuming frontend sends it as a JSON string like '{"edge": 0.5}')
+    condition_str = extra_params.get("condition", "{}")
+    try:
+        condition_dict = json.loads(condition_str.replace("'", '"'))
+    except Exception:
+        condition_dict = {}
+
+    # 4. Route to the correct constructor based on what the model requires
+    if model_name in ["WINDOWEDGSB", "GSBWINDOW"]:
         return ModelClass(col, window=window)
 
+    elif model_name == "PGSB":
+        return ModelClass(col, clusters=clusters, condition=condition_dict)
+
+    elif model_name == "PGSBW":
+        return ModelClass(col, window=window, clusters=clusters, condition=condition_dict)
+
+    elif model_name == "CONGSB":
+        # ConGSB also accepts **kwargs for cluster_optimization
+        return ModelClass(col, clusters=clusters, cond=condition_dict)
+
+    elif model_name == "CONGSBW":
+        # ConGSBWindow uses 'cond' instead of 'condition' in its __init__
+        return ModelClass(col, window=window, clusters=clusters, cond=condition_dict)
+
+    # Default for base models like BM25, GSB
     return ModelClass(col)
 
 """Τρέχει ένα μοντέλο N φορές και επιστρέφει αποτελέσματα."""
