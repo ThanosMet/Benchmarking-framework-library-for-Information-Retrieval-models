@@ -128,17 +128,20 @@ def get_models():
 
 @app.route("/model_params", methods=["GET"])
 def get_model_params():
-    """
-    Επιστρέφει τις extra παραμέτρους ανά μοντέλο ώστε το UI να τις εμφανίζει δυναμικά.
-    """
+    window_param = {"name": "window", "type": "number", "default": 8, "help": "Window size (int/float)"}
+    clusters_param = {"name": "clusters", "type": "number", "default": 5, "help": "Number of clusters"}
+    cond_param = {"name": "condition", "type": "string", "default": "{}", "help": "JSON string eg: {'edge': 0.5}"}
+
     params = {
         "GSB":         [],
         "BM25":        [],
         "GOW":         [],
-        "WINDOWEDGSB": [
-            {"name": "window", "type": "number", "default": 8,
-             "help": "Window size: int για fixed, float (0-1) για ποσοστό"}
-        ],
+        "WINDOWEDGSB": [window_param],
+        "GSBWINDOW": [window_param],
+        "PGSB": [clusters_param, cond_param],
+        "PGSBW": [window_param, clusters_param, cond_param],
+        "CONGSB": [clusters_param, cond_param],
+        "CONGSBW": [window_param, clusters_param, cond_param]
     }
     return jsonify(params)
 
