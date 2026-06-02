@@ -167,7 +167,10 @@ def prune_graph(graph, collection, labels, embeddings, condition):
     - networkx.Graph: The pruned graph.
     - float: Percentage of pruned edges.
     """
-     
+
+    if not condition:  # If the dictionary is empty {}
+        return graph, 0.0  # Return the original graph and 0.0 for prune_percentage
+
     # Edges before pruning
     init_edges = graph.number_of_edges()
     # Track of deleted edges

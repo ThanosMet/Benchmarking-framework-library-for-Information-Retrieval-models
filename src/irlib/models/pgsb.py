@@ -22,23 +22,19 @@ class PGSB(GSB, BaseIRModel):
     
     def __init__(self, collection, clusters, condition={}):
         """Initialize the PGSB model with the given collection, clusters, and pruning conditions."""
-        BaseIRModel.__init__(self, collection)
+
+        # 1. Initialize the parent GSB class
+        # (This automatically sets up k_core_bool AND builds self.graph!)
+        super().__init__(collection)
         
         # model name
-        self.model = self._model()
-
-        # create Union graph
-        self.graph = self.union_graph()
+        self.model = self.__class__.__name__
 
         # Cluster the graph and get labels and embeddings
         self.labels, self.embeddings = cluster_graph(self.graph, collection, clusters)
 
         # Prune the graph
         self.graph, self.prune_percentage = prune_graph(self.graph, collection, self.labels, self.embeddings, condition)
-        
-        # NW Weight of GSBs
-        self._nwk()
-
 
     def _model(self): 
         return __class__.__name__
