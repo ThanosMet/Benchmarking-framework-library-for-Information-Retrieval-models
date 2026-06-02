@@ -125,9 +125,17 @@ def page_run():
             st.divider()
             st.markdown(f"**Παράμετροι {model}**")
             for field in extra_fields:
-                val = st.number_input(
-                    f"{field['name']} — {field['help']}",
-                    value=float(field["default"]),
+                # Αν η παράμετρος είναι string (π.χ. condition JSON)
+                if field.get("type") == "string":
+                    val = st.text_input(
+                        f"{field['name']} — {field['help']}",
+                        value=str(field["default"]),
+                    )
+                    # Αλλιώς είναι νούμερο (π.χ. window, clusters)
+                else:
+                    val = st.number_input(
+                        f"{field['name']} — {field['help']}",
+                        value=float(field["default"]),
                 )
                 extra_params[field["name"]] = val
 
@@ -251,14 +259,31 @@ def page_compare():
         k = st.number_input("Cutoff k (0 = όλα τα docs)", min_value=0, value=0)
         stopwords = st.checkbox("Stopwords", value=True)
 
-        # Window — εμφανίζεται μόνο αν WINDOWEDGSB είναι στην επιλογή
-        window = None
-        if "WINDOWEDGSB" in (selected_models or []):
+        # --- Δυναμικές παράμετροι για ΟΛΑ τα επιλεγμένα μοντέλα ---
+        extra_params = {}
+        model_params = api_get("/model_params") or {}
+
+        # Βρίσκουμε ποιες έξτρα παραμέτρους χρειάζονται τα μοντέλα που επιλέξαμε
+        needed_fields = {}
+        for m in (selected_models or []):
+            for field in model_params.get(m, []):
+                needed_fields[field["name"]] = field
+
+        if needed_fields:
             st.divider()
-            window = st.number_input(
-                "Window size (για WINDOWEDGSB) — int για fixed, float (0-1) για ποσοστό",
-                value=8.0
-            )
+            st.markdown("**Επιπλέον Παράμετροι Μοντέλων**")
+            for name, field in needed_fields.items():
+                if field.get("type") == "string":
+                    val = st.text_input(
+                        f"{name} — {field['help']}",
+                        value=str(field["default"]),
+                    )
+                else:
+                    val = st.number_input(
+                        f"{name} — {field['help']}",
+                        value=float(field["default"]),
+                    )
+                extra_params[name] = val
 
         submitted = st.form_submit_button("▶️ Compare", type="primary")
 
@@ -266,10 +291,6 @@ def page_compare():
         if len(selected_models) < 2:
             st.warning("Επίλεξε τουλάχιστον 2 μοντέλα.")
             return
-
-        extra_params = {}
-        if window is not None:
-            extra_params["window"] = window
 
         payload = {
             "models": selected_models,
