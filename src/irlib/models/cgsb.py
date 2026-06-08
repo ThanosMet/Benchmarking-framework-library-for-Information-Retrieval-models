@@ -2,6 +2,7 @@ import numpy as np
 from numpy import zeros
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
+import networkx as nx
 
 from utilities.functions import cluster_optimization, cluster_graph, prune_graph
 from utilities.metrics import precision_recall
@@ -78,7 +79,7 @@ class ConGSB(GSB):
             self.clusters = clusters
 
         # model name
-        self.model = self._model()
+        self.model = self.__class__.__name__
 
         # Cluster the graph and get labels and embeddings
         self.labels, self.embeddings = cluster_graph(
@@ -280,6 +281,11 @@ class ConGSB(GSB):
         cluster_cnwk = {}
 
         for term in self.collection.inverted_index:
+            # Skip terms that were pruned from the graph
+            if term not in self.graph.nodes:
+                self.collection.inverted_index[term]["cnwk"] = 0.0
+                continue
+
             # Get the cluster of the current term
             cluster = self.graph.nodes[term]["cluster"]
 
@@ -290,12 +296,15 @@ class ConGSB(GSB):
 
                 # Iterate over nodes and compute _cnwk for the cluster
                 for node, attrs in self.graph.nodes(data=True):
-                    if attrs["cluster"] == cluster:
+                    if attrs.get("cluster") == cluster:
                         cluster_size += 1
                         _cnwk += self.collection.inverted_index[node]["nwk"]
 
                 # Compute average _cnwk value for the cluster
-                cluster_cnwk[cluster] = round(_cnwk / cluster_size, 3)
+                if cluster_size > 0:
+                    cluster_cnwk[cluster] = round(_cnwk / cluster_size, 3)
+                else:
+                    cluster_cnwk[cluster] = 0
 
             # Assign the computed _cnwk value to the current term
             self.collection.inverted_index[term]["cnwk"] = cluster_cnwk[cluster]

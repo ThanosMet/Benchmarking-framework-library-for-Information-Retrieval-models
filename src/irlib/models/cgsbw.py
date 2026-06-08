@@ -1,6 +1,7 @@
 from utilities.functions import cluster_graph, prune_graph
 from models.cgsb import ConGSB
 from models.WindowedGSB import WindowedGSBModel as GSBWindow
+import networkx as nx
 
 
 # IMPORTANT: due to __mro__, ConGSBWindow searches ConGSB methods first
@@ -55,7 +56,7 @@ class ConGSBWindow(ConGSB, GSBWindow):
         GSBWindow.__init__(self, collection, window)
 
         # model name
-        self.model = self._model()
+        self.model = self.__class__.__name__
 
         # Cluster the graph and get labels and embeddings
         self.labels, self.embeddings = cluster_graph(self.graph, collection, clusters)
@@ -65,9 +66,11 @@ class ConGSBWindow(ConGSB, GSBWindow):
             self.graph, collection, self.labels, self.embeddings, cond
         )
 
-        # NW Weight of GSBs
-        self._nwk()
+        # Map the labels to the nodes and save them into the graph
+        cluster_mapping = dict(zip(self.graph.nodes(), self.labels))
+        nx.set_node_attributes(self.graph, cluster_mapping, "cluster")
 
+        # NW Weight of GSBs
         self._cnwk()
 
     def _model(self) -> str:

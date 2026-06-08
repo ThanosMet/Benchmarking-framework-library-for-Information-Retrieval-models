@@ -47,10 +47,14 @@ def _build_model(model_name: str, col, extra_params: dict):
     """Αρχικοποιεί το σωστό μοντέλο με τις κατάλληλες παραμέτρους."""
     ModelClass = get_model_class(model_name)
 
-    # 1. Parse Window safely
-    window = extra_params.get("window", 8)
+    # 1. Parse Window safely (Handle Streamlit's 8.0 float conversion)
+    window_raw = extra_params.get("window", 8)
     try:
-        window = float(window) if "." in str(window) else int(window)
+        window = float(window_raw)
+        # If it's 1.0 or higher, it represents a fixed number of words (Integer)
+        # If it's less than 1.0 (e.g. 0.5), it represents a percentage (Float)
+        if window >= 1.0:
+            window = int(window)
     except (ValueError, TypeError):
         window = 8
 
