@@ -103,40 +103,42 @@ def page_run():
     collections = collections_data.get("collections", [])
     model_params = params_data or {}
 
-    # --- Φόρμα παραμέτρων ---
+    # --- 1. ΕΠΙΛΟΓΕΣ ΕΞΩ ΑΠΟ ΤΗ ΦΟΡΜΑ (Για άμεση ανανέωση του UI) ---
+    col_m, col_c = st.columns(2)
+    with col_m:
+        model = st.selectbox("Μοντέλο", models)
+    with col_c:
+        collection = st.selectbox("Συλλογή", collections)
+
+    # --- 2. ΦΟΡΜΑ ΠΑΡΑΜΕΤΡΩΝ ---
     with st.form("run_form"):
         col1, col2 = st.columns(2)
 
         with col1:
-            model = st.selectbox("Μοντέλο", models)
-            collection = st.selectbox("Συλλογή", collections)
-
-        with col2:
             runs = st.number_input("Αριθμός runs", min_value=1, max_value=10, value=1)
             k = st.number_input("Cutoff k (0 = όλα τα docs)", min_value=0, value=0)
+        with col2:
             stopwords = st.checkbox("Stopwords", value=True)
             min_freq = st.number_input("Min frequency (apriori)", min_value=1, value=1)
             save = st.checkbox("Αποθήκευση στη MongoDB", value=False)
 
-        # --- Δυναμικές παράμετροι ανά μοντέλο (π.χ. window για WindowedGSB) ---
+        # --- Δυναμικές παράμετροι ανά μοντέλο ---
         extra_params = {}
         extra_fields = model_params.get(model, [])
         if extra_fields:
             st.divider()
             st.markdown(f"**Παράμετροι {model}**")
             for field in extra_fields:
-                # Αν η παράμετρος είναι string (π.χ. condition JSON)
                 if field.get("type") == "string":
                     val = st.text_input(
                         f"{field['name']} — {field['help']}",
                         value=str(field["default"]),
                     )
-                    # Αλλιώς είναι νούμερο (π.χ. window, clusters)
                 else:
                     val = st.number_input(
                         f"{field['name']} — {field['help']}",
                         value=float(field["default"]),
-                )
+                    )
                 extra_params[field["name"]] = val
 
         submitted = st.form_submit_button("▶️ Run", type="primary")
@@ -252,18 +254,26 @@ def page_compare():
     models = models_data.get("models", [])
     collections = collections_data.get("collections", [])
 
-    with st.form("compare_form"):
+    # --- 1. ΕΠΙΛΟΓΕΣ ΕΞΩ ΑΠΟ ΤΗ ΦΟΡΜΑ ---
+    col_m, col_c = st.columns(2)
+    with col_m:
         selected_models = st.multiselect("Μοντέλα προς σύγκριση", models, default=models[:2])
+    with col_c:
         collection = st.selectbox("Συλλογή", collections)
-        runs = st.number_input("Αριθμός runs", min_value=1, max_value=5, value=1)
-        k = st.number_input("Cutoff k (0 = όλα τα docs)", min_value=0, value=0)
-        stopwords = st.checkbox("Stopwords", value=True)
+
+    # --- 2. ΦΟΡΜΑ ΠΑΡΑΜΕΤΡΩΝ ---
+    with st.form("compare_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            runs = st.number_input("Αριθμός runs", min_value=1, max_value=5, value=1)
+        with col2:
+            k = st.number_input("Cutoff k (0 = όλα τα docs)", min_value=0, value=0)
+            stopwords = st.checkbox("Stopwords", value=True)
 
         # --- Δυναμικές παράμετροι για ΟΛΑ τα επιλεγμένα μοντέλα ---
         extra_params = {}
         model_params = api_get("/model_params") or {}
 
-        # Βρίσκουμε ποιες έξτρα παραμέτρους χρειάζονται τα μοντέλα που επιλέξαμε
         needed_fields = {}
         for m in (selected_models or []):
             for field in model_params.get(m, []):

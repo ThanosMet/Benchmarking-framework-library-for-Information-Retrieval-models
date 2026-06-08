@@ -59,4 +59,4 @@ class PGSBW(GSBWindow, BaseIRModel):
 
         # Prune the graph
         self.graph, self.prune_percentage = prune_graph(self.graph, collection, self.labels, self.embeddings, condition)
-        
+
