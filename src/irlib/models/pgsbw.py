@@ -52,7 +52,7 @@ class PGSBW(GSBWindow, BaseIRModel):
         GSBWindow.__init__(self, collection, window)
 
         # model name
-        self.model = self._model()
+        self.model = self.__class__.__name__
 
         # Cluster the graph and get labels and embeddings
         self.labels, self.embeddings = cluster_graph(self.graph, collection, clusters)
@@ -60,8 +60,3 @@ class PGSBW(GSBWindow, BaseIRModel):
         # Prune the graph
         self.graph, self.prune_percentage = prune_graph(self.graph, collection, self.labels, self.embeddings, condition)
         
-        # NW Weight of GSBs
-        self._nwk()
-
-
-    def _model(self): return __class__.__name__

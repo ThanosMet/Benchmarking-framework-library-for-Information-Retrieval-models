@@ -73,7 +73,8 @@ class ConGSB(GSB):
         self.cluster_optimization = kwargs.get("cluster_optimization", False)
         print(f"Cluster optimization is set to {self.cluster_optimization}")
         if self.cluster_optimization in {"eigen_gap", "elbow", "silhouette"}:
-            self.clusters = cluster_optimization( graph = self.graph, collection = collection, method  = self.cluster_optimization)
+            self.clusters = cluster_optimization(graph=self.graph, collection=collection,
+                                                 method=self.cluster_optimization)
             print(self.clusters)
         else:
             self.clusters = clusters
@@ -81,19 +82,27 @@ class ConGSB(GSB):
         # model name
         self.model = self.__class__.__name__
 
-        # Cluster the graph and get labels and embeddings
+        # 1. Cluster the graph and get labels and embeddings
         self.labels, self.embeddings = cluster_graph(
             self.graph, collection, self.clusters
         )
 
-        # Prune the graph
+        # 2. MAP LABELS BEFORE PRUNING (While nodes and labels match exactly 1-to-1)
+        import networkx as nx
+        cluster_mapping = dict(zip(list(self.graph.nodes()), self.labels))
+        nx.set_node_attributes(self.graph, cluster_mapping, "cluster")
+
+        # 3. Prune the graph
         self.graph, self.prune_percentage = prune_graph(
             self.graph, collection, self.labels, self.embeddings, cond
         )
 
-        # calculate the new scalar centroids of NWk
-        self._cnwk()
+        # 4. RE-APPLY THE MAPPING
+        # (Restores attributes to surviving nodes just in case prune_graph wiped them)
+        nx.set_node_attributes(self.graph, cluster_mapping, "cluster")
 
+        # 5. calculate the new scalar centroids of NWk
+        self._cnwk()
 
 
     def _model(self):
