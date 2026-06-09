@@ -12,8 +12,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 # Απόλυτα paths στα NPL αρχεία
 # (Προσάρμοσε τα paths αν τα έβαλες σε διαφορετικούς φακέλους!)
 NPL_DOCS_DIR = PROJECT_ROOT / "collections" / "NPL" / "docs"
-NPL_QUERIES_FILE = PROJECT_ROOT / "collections" / "NPL"
-NPL_QRELS_FILE = PROJECT_ROOT / "collections" / "NPL"
+NPL_QUERIES_FILE = PROJECT_ROOT / "collections" / "NPL"/ "queries.txt"
+NPL_QRELS_FILE = PROJECT_ROOT / "collections" / "NPL"/ "relevant.txt"
 
 # ---------------------------------------------
 # 1. Φόρτωμα NPL documents από τα αρχεία 10005, 10012, ...
