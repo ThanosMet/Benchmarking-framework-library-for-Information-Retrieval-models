@@ -81,7 +81,7 @@ class GIRTEModel(GSBModel):
         matrice_dictionary = self._load_matrices()
         print('Building union graph...')
         for document in tqdm(self.collection.docs):
-            tokens = list(document.token_frequency.keys())
+            tokens = list(document.tf.keys())
             adj_matrix = matrice_dictionary[document.doc_id]
             kcore = []
             # Iterate over rows
@@ -107,7 +107,7 @@ class GIRTEModel(GSBModel):
         matrice_dictionary = self._load_matrices()
         print('Building union graph...')
         for document in tqdm(self.collection.docs):
-            tokens = list(document.token_frequency.keys())
+            tokens = list(document.tf.keys())
             adj_matrix = matrice_dictionary[document.doc_id]
             kcore = []
             # Iterate over rows
@@ -205,7 +205,7 @@ class GIRTEModel(GSBModel):
     
     def _doc_to_matrix(self, document: TokDocument) -> array:
     #Generate adjacency matrix of a given document based on token frequency.
-        rows = array(list(document.token_frequency.values()))
+        rows = array(list(document.tf.values()))
         row = rows.reshape(1, rows.shape[0]).T
         col = rows.reshape(rows.shape[0], 1).T
         adj_matrix = dot(row, col)
