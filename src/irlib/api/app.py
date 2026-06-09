@@ -86,6 +86,22 @@ def _build_model(model_name: str, col, extra_params: dict):
         # ConGSBWindow uses 'cond' instead of 'condition' in its __init__
         return ModelClass(col, window=window, clusters=clusters, cond=condition_dict)
 
+    elif model_name == "GIRTE":
+        tensors = bool(int(extra_params.get("tensors", 0)))
+        bert = str(extra_params.get("bert", "base"))
+        theta_val = float(extra_params.get("theta_val", 0.0))
+        k_core_bool = bool(int(extra_params.get("k_core_bool", 0)))
+        h_val = float(extra_params.get("h_val", 1.0))
+
+        return ModelClass(
+            col,
+            tensors=tensors,
+            bert=bert,
+            theta_val=theta_val,
+            k_core_bool=k_core_bool,
+            h_val=h_val
+        )
+
     # Default for base models like BM25, GSB
     return ModelClass(col)
 
@@ -162,6 +178,11 @@ def get_model_params():
     window_param = {"name": "window", "type": "number", "default": 8, "help": "Window size (int/float)"}
     clusters_param = {"name": "clusters", "type": "number", "default": 5, "help": "Number of clusters"}
     cond_param = {"name": "condition", "type": "string", "default": "{}", "help": "JSON string eg: {'edge': 0.5}"}
+    tensors_param = {"name": "tensors", "type": "number", "default": 0,"help": "1 for True (BERT Tensors), 0 for False"}
+    bert_param = {"name": "bert", "type": "string", "default": "base", "help": "'base' or 'large'"}
+    theta_param = {"name": "theta_val", "type": "number", "default": 0.0,"help": "Cosine similarity threshold (e.g., 0.5)"}
+    kcore_param = {"name": "k_core_bool", "type": "number", "default": 0, "help": "1 for True, 0 for False"}
+    hval_param = {"name": "h_val", "type": "number", "default": 1.0, "help": "h value modifier"}
 
     params = {
         "GSB":         [],
@@ -172,7 +193,8 @@ def get_model_params():
         "PGSB": [clusters_param, cond_param],
         "PGSBW": [window_param, clusters_param, cond_param],
         "CONGSB": [clusters_param, cond_param],
-        "CONGSBW": [window_param, clusters_param, cond_param]
+        "CONGSBW": [window_param, clusters_param, cond_param],
+        "GIRTE": [tensors_param, bert_param, theta_param, kcore_param, hval_param]
     }
     return jsonify(params)
 

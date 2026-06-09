@@ -17,6 +17,7 @@ from models.pgsb import PGSB
 from models.pgsbw import PGSBW
 from models.cgsb import ConGSB
 from models.cgsbw import ConGSBWindow
+from models.GIRTE import GIRTEModel
 
 REGISTRY = {
     "GSB":         GSBModel,
@@ -27,7 +28,8 @@ REGISTRY = {
     "PGSB":        PGSB,
     "PGSBW":       PGSBW,
     "CONGSB":      ConGSB,
-    "CONGSBW":     ConGSBWindow
+    "CONGSBW":     ConGSBWindow,
+    "GIRTE":       GIRTEModel
 }
 
 
