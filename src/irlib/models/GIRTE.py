@@ -5,7 +5,9 @@ from pickle import load, dump
 from numpy import array, dot, fill_diagonal, zeros
 from networkx import Graph, set_node_attributes
 from tqdm import tqdm
-from nltk.corpus import stopwords
+from nltk.corpus import stopwords as nltk_sw
+import nltk
+nltk.download('stopwords', quiet=True)
 from transformers import BertTokenizer
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
@@ -129,7 +131,7 @@ class GIRTEModel(GSBModel):
 
 
     # Document ranking function for queries. Used for both TokenizedGSB and GIRTE Models.
-    def fit(self, term_queries=None, min_freq=1, use_stopwords=True):
+    def fit(self, term_queries=None, min_freq=1, stopwords=True):
         tokenizer = BertTokenizer.from_pretrained(f'bert-{self._bert}-uncased')
         if term_queries is None:
             term_queries = self._queries
@@ -137,9 +139,9 @@ class GIRTEModel(GSBModel):
         print('Tokenizing Queries...')
         for term_query in term_queries:
             trimmed_query = []
-            if use_stopwords == True:
+            if stopwords == True:
                 for word in term_query:
-                    if word.lower() not in stopwords.words('english'):
+                    if word.lower() not in nltk_sw.words('english'):
                         trimmed_query.append(word)
             else:
                 trimmed_query = term_query
