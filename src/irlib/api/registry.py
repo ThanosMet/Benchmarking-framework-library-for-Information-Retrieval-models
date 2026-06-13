@@ -18,6 +18,7 @@ from models.pgsbw import PGSBW
 from models.cgsb import ConGSB
 from models.cgsbw import ConGSBWindow
 from models.GIRTE import GIRTEModel
+from models.pylate_colbert import PyLateColBERT
 
 REGISTRY = {
     "GSB":         GSBModel,
@@ -29,7 +30,8 @@ REGISTRY = {
     "PGSBW":       PGSBW,
     "CONGSB":      ConGSB,
     "CONGSBW":     ConGSBWindow,
-    "GIRTE":       GIRTEModel
+    "GIRTE":       GIRTEModel,
+    "PYLATE":      PyLateColBERT
 }
 
 
