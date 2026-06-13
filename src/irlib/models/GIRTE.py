@@ -180,29 +180,38 @@ class GIRTEModel(GSBModel):
         return self
 
     def _load_matrices(self) -> dict[int, array]:
-        load_path = f'C:/picklejar/matrices/mat.{self._bert}.{self._stopwords}.{self._method}'
+        # 1. Safely grab the collection name (e.g., 'CF' or 'NPL')
+        col_name = getattr(self.collection, 'name', 'UNKNOWN')
+
+        # 2. Add the collection name into the saved file path!
+        load_path = f'C:/picklejar/matrices/mat.{col_name}.{self._bert}.{self._stopwords}.{self._method}'
+
         try:
-            # Load matrices from disk, if it already exists.
+            # Load matrices from disk, if it already exists for THIS collection.
             with open(load_path, 'rb') as picklefile:
                 matrix_dictionary = load(picklefile)
-            print('Matrix dictionary loaded from disk.')
+            print(f'[{col_name}] Matrix dictionary loaded from disk.')
         except:
-            # If the file doesn't exist, genereate the matrices and save for future use. 
-            print('Matrix dictionary not found, rebuilding...')
-            matrix_dictionary = {} # {Document: Matrix}
+            # If the file doesn't exist, generate the matrices and save for future use.
+            print(f'[{col_name}] Matrix dictionary not found, rebuilding...')
+            matrix_dictionary = {}  # {Document: Matrix}
+
             if self._method == 'tf':
                 for document in tqdm(self.collection.docs):
                     matrix_dictionary[document.doc_id] = self._doc_to_matrix(document)
             elif self._method == 'ts':
-                tensor_path = f'C:/picklejar/tensors/{self._bert}/{self._stopwords}/'
+                # Add collection name to the tensor path as well to prevent mixing them up
+                tensor_path = f'C:/picklejar/tensors/{col_name}/{self._bert}/{self._stopwords}/'
                 for document in tqdm(self.collection.docs):
                     with open(tensor_path + str(document.doc_id), 'rb') as picklefile:
                         document_tensors = load(picklefile)
                     matrix_dictionary[document.doc_id] = self._doc_to_matrix_tensor(document_tensors)
+
             makedirs('C:/picklejar/matrices', exist_ok=True)
             with open(load_path, 'wb') as picklefile:
                 dump(matrix_dictionary, picklefile)
-            print('Saved Matrix dictionary on disk.')
+            print(f'[{col_name}] Saved Matrix dictionary on disk.')
+
         return matrix_dictionary
     
     def _doc_to_matrix(self, document: TokDocument) -> array:
