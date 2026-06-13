@@ -51,13 +51,8 @@ class PyLateColBERT(Model):
                 d_tensor = torch.tensor(d_emb, dtype=torch.float32)
 
                 # --- The ColBERT MaxSim Operation ---
-                # 1. Calculate similarity matrix between all query tokens and doc tokens
                 sim_matrix = torch.matmul(q_tensor, d_tensor.T)
-
-                # 2. Find the maximum similarity for each query token
                 max_sims, _ = torch.max(sim_matrix, dim=1)
-
-                # 3. Sum them up to get the final document score
                 score = torch.sum(max_sims).item()
 
                 rqd[doc.doc_id] = score
