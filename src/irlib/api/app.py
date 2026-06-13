@@ -93,7 +93,11 @@ def _build_model(model_name: str, col, extra_params: dict):
         k_core_bool = bool(int(extra_params.get("k_core_bool", 0)))
         h_val = float(extra_params.get("h_val", 1.0))
 
-        return ModelClass(
+    elif model_name == "PYLATE":
+        pretrained_model = str(extra_params.get("pretrained_model", "lightonai/colbertv2.0"))
+        return ModelClass(col, pretrained_model=pretrained_model)
+
+    return ModelClass(
             col,
             tensors=tensors,
             bert=bert,
@@ -183,6 +187,8 @@ def get_model_params():
     theta_param = {"name": "theta_val", "type": "number", "default": 0.0,"help": "Cosine similarity threshold (e.g., 0.5)"}
     kcore_param = {"name": "k_core_bool", "type": "number", "default": 0, "help": "1 for True, 0 for False"}
     hval_param = {"name": "h_val", "type": "number", "default": 1.0, "help": "h value modifier"}
+    pylate_param = {"name": "pretrained_model", "type": "string", "default": "lightonai/colbertv2.0",
+                    "help": "HuggingFace model ID (e.g., lightonai/colbertv2.0)"}
 
     params = {
         "GSB":         [],
@@ -194,7 +200,9 @@ def get_model_params():
         "PGSBW": [window_param, clusters_param, cond_param],
         "CONGSB": [clusters_param, cond_param],
         "CONGSBW": [window_param, clusters_param, cond_param],
-        "GIRTE": [tensors_param, bert_param, theta_param, kcore_param, hval_param]
+        "GIRTE": [tensors_param, bert_param, theta_param, kcore_param, hval_param],
+        "PYLATE": [pylate_param]
+
     }
     return jsonify(params)
 
