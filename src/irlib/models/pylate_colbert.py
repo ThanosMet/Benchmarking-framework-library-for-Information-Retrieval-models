@@ -4,6 +4,7 @@ from tqdm import tqdm
 from pylate import models
 
 from models.Model import Model
+from utilities.document_utls import calc_precision_recall  \
 
 
 class PyLateColBERT(Model):
@@ -61,11 +62,38 @@ class PyLateColBERT(Model):
 
                 rqd[doc.doc_id] = score
 
-            # Append the dictionary of scores so the parent Model.evaluate() can rank them
+            # Append the dictionary of scores
             self._weights.append(rqd)
 
         return self
 
+    # --------------------------------------------------------
+    # Override the Evaluate Method
+    # --------------------------------------------------------
+    def evaluate(self, k=None):
+        """Overrides the parent evaluate to bypass vector/graph requirements."""
+        self.precision = []
+        self.recall = []
+
+        # Safely get the relevance list
+        rel = getattr(self, '_relevant', self.collection.relevant)
+
+        for doc_sim, relevant_docs in zip(self._weights, rel):
+            # Sort documents by their ColBERT score (highest first)
+            sorted_docs = [doc_id for doc_id, score in sorted(doc_sim.items(), key=lambda item: item[1], reverse=True)]
+
+            # Apply the top-k cutoff
+            cutoff = k if k else len(sorted_docs)
+
+            # Calculate metrics using the framework's built-in utility
+            pre, rec, mrr = calc_precision_recall(sorted_docs, relevant_docs, cutoff)
+
+            self.precision.append(pre)
+            self.recall.append(rec)
+
+    # --------------------------------------------------------
+    # Fulfill the Abstract Base Class Requirements
+    # --------------------------------------------------------
     def get_model(self):
         return self.model
 
