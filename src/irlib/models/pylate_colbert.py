@@ -65,3 +65,12 @@ class PyLateColBERT(Model):
             self._weights.append(rqd)
 
         return self
+
+    def get_model(self):
+        return self.model
+
+    def _model_func(self, *args, **kwargs):
+        pass
+
+    def _vectorizer(self, *args, **kwargs):
+        pass
