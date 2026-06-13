@@ -93,11 +93,7 @@ def _build_model(model_name: str, col, extra_params: dict):
         k_core_bool = bool(int(extra_params.get("k_core_bool", 0)))
         h_val = float(extra_params.get("h_val", 1.0))
 
-    elif model_name == "PYLATE":
-        pretrained_model = str(extra_params.get("pretrained_model", "lightonai/colbertv2.0"))
-        return ModelClass(col, pretrained_model=pretrained_model)
-
-    return ModelClass(
+        return ModelClass(
             col,
             tensors=tensors,
             bert=bert,
@@ -105,6 +101,10 @@ def _build_model(model_name: str, col, extra_params: dict):
             k_core_bool=k_core_bool,
             h_val=h_val
         )
+
+    elif model_name == "PYLATE":
+        pretrained_model = str(extra_params.get("pretrained_model", "lightonai/colbertv2.0"))
+        return ModelClass(col, pretrained_model=pretrained_model)
 
     # Default for base models like BM25, GSB
     return ModelClass(col)
