@@ -1,12 +1,12 @@
-# scripts/insert_cran_collection.py
-
+import sys
 from pathlib import Path
 from typing import List, Dict
 
-from irlib.datasets_insert.mongo_ingest import ingest_collection
-
 # Ρίζα του project
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from irlib.datasets_insert.mongo_ingest import ingest_collection
 
 # Απόλυτα paths στα CRAN αρχεία (βάσει του screenshot σου)
 CRAN_DOCS_DIR = PROJECT_ROOT / "collections" / "CRAN" / "docs"

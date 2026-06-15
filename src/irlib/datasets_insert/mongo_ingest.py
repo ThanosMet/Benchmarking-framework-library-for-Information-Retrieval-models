@@ -15,7 +15,8 @@ def _normalize_documents(
 
         normalized.append(
             {
-                "_id": str(doc_id),
+                # Αφαιρέθηκε το "_id" για να μην υπάρχει duplicate key error
+                "id": str(doc_id),
                 "collection": collection_name,
                 "text": text,
                 # εδώ αργότερα μπορείς να βάλεις extra metadata
@@ -34,7 +35,8 @@ def _normalize_queries(
 
         normalized.append(
             {
-                "_id": str(q_id),
+                # Αφαιρέθηκε το "_id"
+                "id": str(q_id),
                 "collection": collection_name,
                 "text": text,
             }
