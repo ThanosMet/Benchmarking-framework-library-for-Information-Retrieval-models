@@ -24,8 +24,10 @@ def load_cran_documents() -> List[Dict]:
         if not doc_path.is_file() or doc_path.name.startswith("."):
             continue
 
-        # Το id είναι το όνομα του αρχείου
-        doc_id = doc_path.name
+        # Το doc_path.stem παίρνει το όνομα χωρίς την κατάληξη .txt
+        # Το int() αφαιρεί τα μηδενικά μπροστά (π.χ. "0001" -> 1)
+        # Το str() το ξανακάνει κείμενο (1 -> "1")
+        doc_id = str(int(doc_path.stem))
 
         with open(doc_path, "r", encoding="utf-8", errors="ignore") as f:
             tokens = f.read().split()
@@ -67,8 +69,8 @@ def load_cran_queries_and_qrels() -> tuple[List[Dict], List[Dict]]:
 
             # Ελέγχουμε αν η γραμμή έχει τουλάχιστον 2 στοιχεία (query_id, doc_id)
             if len(parts) >= 2:
-                query_id = parts[0].strip()
-                doc_id = parts[1].strip()
+                query_id = str(int(parts[0].strip()))
+                doc_id = str(int(parts[1].strip()))
 
                 # Αν υπάρχει 3η στήλη, παίρνουμε το relevancy code (1-4), αλλιώς βάζουμε 1
                 relevancy_code = int(parts[2].strip()) if len(parts) >= 3 else 1
