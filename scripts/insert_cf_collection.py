@@ -1,13 +1,13 @@
 # scripts/insert_cf_collection.py
-
+import sys
 from pathlib import Path
 import os
 from typing import List, Dict
 
-from irlib.datasets_insert.mongo_ingest import ingest_collection
-
 # Ρίζα του project, π.χ. .../ir-model-comparison
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+from irlib.datasets_insert.mongo_ingest import ingest_collection
 
 # Απόλυτο path στα CF docs
 CF_DOCS_DIR = PROJECT_ROOT / "collections" / "CF" / "docs"
