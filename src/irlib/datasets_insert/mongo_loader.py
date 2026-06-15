@@ -31,14 +31,14 @@ def load_collection(
     qrels_cursor = qrels_col.find({"collection": collection_name})
 
     documents: List[Dict] = [
-        # Αλλάξαμε το "_id" σε "id"
-        {"id": str(doc["id"]), "text": doc["text"]}
+        # Χρησιμοποιούμε την .get() για να μη σκάει αν λείπει το κλειδί.
+        # Αν δεν βρει 'id', παίρνει το '_id' (για τα παλιά δεδομένα).
+        {"id": str(doc.get("id", doc.get("_id"))), "text": doc["text"]}
         for doc in docs_cursor
     ]
 
     queries: List[Dict] = [
-        # Αλλάξαμε το "_id" σε "id"
-        {"id": str(q["id"]), "text": q["text"]}
+        {"id": str(q.get("id", q.get("_id"))), "text": q["text"]}
         for q in queries_cursor
     ]
 
