@@ -19,6 +19,7 @@ from models.cgsb import ConGSB
 from models.cgsbw import ConGSBWindow
 from models.GIRTE import GIRTEModel
 from models.pylate_colbert import PyLateColBERT
+from models.tfidf_model import TFIDFModel
 
 REGISTRY = {
     "GSB":         GSBModel,
@@ -31,7 +32,8 @@ REGISTRY = {
     "CONGSB":      ConGSB,
     "CONGSBW":     ConGSBWindow,
     "GIRTE":       GIRTEModel,
-    "PYLATE":      PyLateColBERT
+    "PYLATE":      PyLateColBERT,
+    "TFIDF":       TFIDFModel
 }
 
 
