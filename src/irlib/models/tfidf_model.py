@@ -17,7 +17,8 @@ class TFIDFModel(Model):
         # DF is how many distinct documents contain a specific word
         df = {}
         for doc in self.collection.docs:
-            for term in set(doc.tokens):
+            # ΑΛΛΑΓΗ ΕΔΩ: Χρησιμοποιούμε τα κλειδιά του doc.tf αντί για doc.tokens
+            for term in doc.tf.keys():
                 df[term] = df.get(term, 0) + 1
 
         total_docs = len(self.collection.docs)
