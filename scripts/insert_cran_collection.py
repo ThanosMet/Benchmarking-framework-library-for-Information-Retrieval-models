@@ -51,7 +51,6 @@ def load_cran_queries_and_qrels() -> tuple[List[Dict], List[Dict]]:
     qrels: List[Dict] = []
 
     # --- Διάβασμα Queries ---
-    # Υποθέτουμε ότι έχεις 1 query ανά γραμμή (όπως στο NPL)
     with open(CRAN_QUERIES_FILE, "r", encoding="utf-8", errors="ignore") as f:
         query_lines = [line.strip() for line in f if line.strip()]
 
@@ -61,28 +60,27 @@ def load_cran_queries_and_qrels() -> tuple[List[Dict], List[Dict]]:
             "text": line
         })
 
-    # --- Διάβασμα Qrels (Relevant Docs) ---
-    # Το Readme λέει: 3 στήλες -> (Query_ID, Doc_ID, Relevancy_Code)
+    # ---Διάβασμα Qrels (Βάσει της πραγματικής δομής του Relevant.txt) ---
     with open(CRAN_QRELS_FILE, "r", encoding="utf-8", errors="ignore") as f:
-        for line in f:
-            parts = line.strip().split()
+        # Διαβάζουμε όλες τις γραμμές
+        qrel_lines = [line.strip() for line in f if line.strip()]
 
-            # Ελέγχουμε αν η γραμμή έχει τουλάχιστον 2 στοιχεία (query_id, doc_id)
-            if len(parts) >= 2:
-                query_id = str(int(parts[0].strip()))
-                doc_id = str(int(parts[1].strip()))
+    # Η Γραμμή 1 (idx=1) έχει τα έγγραφα για το Query 1, κ.ο.κ.
+    for q_idx, line in enumerate(qrel_lines, start=1):
+        query_id = str(q_idx)
 
-                # Αν υπάρχει 3η στήλη, παίρνουμε το relevancy code (1-4), αλλιώς βάζουμε 1
-                relevancy_code = int(parts[2].strip()) if len(parts) >= 3 else 1
+        # Κόβουμε τη γραμμή στα κενά. Κάθε νούμερο είναι ένα σχετικό έγγραφο!
+        relevant_docs = line.split()
 
-                qrels.append(
-                    {
-                        "collection": "CRAN",
-                        "query_id": query_id,
-                        "doc_id": doc_id,
-                        "relevance": relevancy_code
-                    }
-                )
+        for doc_str in relevant_docs:
+            doc_id = str(int(doc_str.strip()))
+
+            qrels.append({
+                "collection": "CRAN",
+                "query_id": query_id,
+                "doc_id": doc_id,
+                "relevance": 1  # Δεν έχουμε βαθμούς 1-4 εδώ, οπότε όλα είναι 1 (Relevant)
+            })
 
     return queries, qrels
 
