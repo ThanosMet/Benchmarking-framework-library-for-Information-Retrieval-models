@@ -12,7 +12,6 @@ from models.GSB import GSBModel
 from models.BM25 import BM25Model
 from models.GoW import Gow
 from models.WindowedGSB import WindowedGSBModel
-from models.gsbw import GSBWindow
 from models.pgsb import PGSB
 from models.pgsbw import PGSBW
 from models.cgsb import ConGSB
@@ -28,7 +27,6 @@ REGISTRY = {
     "BM25":        BM25Model,
     "GOW":         Gow,
     "WINDOWEDGSB": WindowedGSBModel,
-    "GSBWINDOW":   GSBWindow,
     "PGSB":        PGSB,
     "PGSBW":       PGSBW,
     "CONGSB":      ConGSB,
