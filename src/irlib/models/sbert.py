@@ -39,8 +39,16 @@ class SBERTModel(Model):
         print(f"[{self.model_name}] Υπολογισμός εγγράφων (Encoding)...")
         self._doc_embeddings = self.encoder.encode(doc_texts, convert_to_tensor=True, show_progress_bar=True)
 
-        # 4. Παίρνουμε τα κείμενα των queries
-        query_texts = [q["text"] if isinstance(q, dict) else q.text for q in self._queries]
+        # 4. Παίρνουμε τα κείμενα των queries, ελέγχοντας όλες τις πιθανές μορφές (dict, list, object)
+        query_texts = []
+        for q in self._queries:
+            if isinstance(q, dict):
+                q_text = q["text"]
+            elif isinstance(q, list):
+                q_text = " ".join(q)  # <-- ΕΔΩ ΕΙΝΑΙ Η ΠΡΟΣΘΗΚΗ: Ενώνει τα tokens σε πρόταση!
+            else:
+                q_text = q.text
+            query_texts.append(q_text)
 
         # 5. Υπολογίζουμε τα Embeddings για τα queries
         print(f"[{self.model_name}] Υπολογισμός {len(query_texts)} queries...")
