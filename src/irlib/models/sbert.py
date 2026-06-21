@@ -19,8 +19,9 @@ class SBERTModel(Model):
         """Υπολογίζει τα Dense Embeddings για έγγραφα και ερωτήματα."""
         print(f"[{self.model_name}] Φόρτωση {len(self.collection.docs)} εγγράφων στο SBERT...")
 
-        # 1. Παίρνουμε τα IDs όλων των εγγράφων
-        doc_ids = [str(doc.doc_id) for doc in self.collection.docs]
+        # 1. ΠΑΙΡΝΟΥΜΕ ΤΑ IDs ΟΠΩΣ ΕΙΝΑΙ ΣΤΗ ΜΝΗΜΗ (χωρίς str()) για να ταιριάζουν με τα Qrels
+        doc_ids = [doc.doc_id for doc in self.collection.docs]
+
         # 2. Φέρνουμε τα αυθεντικά κείμενα (raw text) απευθείας από τη MongoDB
         col_name = getattr(self.collection, 'name', 'CRAN')
         print(f"[{self.model_name}] Ανάκτηση κειμένων από MongoDB (Συλλογή: {col_name})...")
@@ -38,20 +39,19 @@ class SBERTModel(Model):
         # Φτιάχνουμε το mapping καθαρίζοντας τα κλειδιά της βάσης
         text_mapping = {clean_id(d["id"]): d["text"] for d in raw_docs_cursor}
 
-        # Τραβάμε τα κείμενα καθαρίζοντας και τα IDs του framework
-        doc_texts = [text_mapping.get(clean_id(doc_id), "") for doc_id in doc_ids]
+        # Τραβάμε τα κείμενα μετατρέποντας το doc_id σε string ΜΟΝΟ για την αναζήτηση στη βάση
+        doc_texts = [text_mapping.get(clean_id(str(doc_id)), "") for doc_id in doc_ids]
 
-        # Safety Check: Αν υπάρχουν κενά κείμενα, το τυπώνουμε στο terminal για να το ξέρουμε!
+        # Safety Check
         empty_docs = doc_texts.count("")
         if empty_docs > 0:
-            print(f"[ΠΡΟΣΟΧΗ] Το SBERT δεν βρήκε κείμενο για {empty_docs} έγγραφα στη βάση! Ελέγξτε τα IDs.")
-        # ---------------------------------------------
+            print(f"[ΠΡΟΣΟΧΗ] Το SBERT δεν βρήκε κείμενο για {empty_docs} έγγραφα στη βάση!")
 
         # 3. Υπολογίζουμε τα Embeddings για τα έγγραφα
         print(f"[{self.model_name}] Υπολογισμός εγγράφων (Encoding)...")
         self._doc_embeddings = self.encoder.encode(doc_texts, convert_to_tensor=True, show_progress_bar=True)
 
-        # 4. Παίρνουμε τα κείμενα των queries, ελέγχοντας όλες τις πιθανές μορφές (dict, list, object)
+        # 4. Παίρνουμε τα κείμενα των queries
         query_texts = []
         for q in self._queries:
             if isinstance(q, dict):
@@ -70,12 +70,13 @@ class SBERTModel(Model):
         print(f"[{self.model_name}] Υπολογισμός Cosine Similarities...")
         cosine_scores = util.cos_sim(query_embeddings, self._doc_embeddings)
 
-        # 7. Μετατρέπουμε τα Tensors σε λίστες από dictionaries
+        # 7. Αποθηκεύουμε τα σκορ ΚΡΑΤΩΝΤΑΣ το αυθεντικό ID (doc_ids[j])
         for i in range(len(query_texts)):
             query_scores = {}
             for j in range(len(doc_ids)):
                 score = cosine_scores[i][j].item()
                 if score > 0:
+                    # Εδώ πλέον περνάει ως int (ή ό,τι ήταν αρχικά)
                     query_scores[doc_ids[j]] = score
             self._weights.append(query_scores)
 
