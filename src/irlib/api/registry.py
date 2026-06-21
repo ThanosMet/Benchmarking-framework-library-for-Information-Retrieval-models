@@ -21,6 +21,7 @@ from models.GIRTE import GIRTEModel
 from models.pylate_colbert import PyLateColBERT
 from models.tfidf_model import TFIDFModel
 from models.sbert import SBERTModel
+from models.lsi import LSIModel
 
 REGISTRY = {
     "GSB":         GSBModel,
@@ -35,7 +36,8 @@ REGISTRY = {
     "GIRTE":       GIRTEModel,
     "PYLATE":      PyLateColBERT,
     "TFIDF":       TFIDFModel,
-    "SBERT": SBERTModel
+    "SBERT": SBERTModel,
+    "LSI": LSIModel
 }
 
 
