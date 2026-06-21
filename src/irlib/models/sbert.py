@@ -3,12 +3,14 @@ from sentence_transformers import SentenceTransformer, util
 from models.Model import Model
 from utilities.document_utls import calc_precision_recall
 
+# Κάνουμε import το εργαλείο της βάσης μας
+from irlib.utilities.mongo import get_db
+
 
 class SBERTModel(Model):
     def __init__(self, collection):
         super().__init__(collection)
         self.model_name = "SBERT"
-        # Φορτώνουμε ένα ελαφρύ και γρήγορο προεκπαιδευμένο μοντέλο SBERT
         self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
         self._doc_embeddings = None
         self._weights = []
@@ -17,48 +19,55 @@ class SBERTModel(Model):
         """Υπολογίζει τα Dense Embeddings για έγγραφα και ερωτήματα."""
         print(f"[{self.model_name}] Φόρτωση {len(self.collection.docs)} εγγράφων στο SBERT...")
 
-        # 1. Παίρνουμε το πλήρες κείμενο (raw text) όλων των εγγράφων
-        doc_texts = [doc.text for doc in self.collection.docs]
-        doc_ids = [doc.doc_id for doc in self.collection.docs]
+        # 1. Παίρνουμε τα IDs όλων των εγγράφων
+        doc_ids = [str(doc.doc_id) for doc in self.collection.docs]
 
-        # 2. Υπολογίζουμε τα Embeddings για τα έγγραφα (αυτό μπορεί να πάρει λίγο χρόνο την πρώτη φορά)
+        # 2. Φέρνουμε τα αυθεντικά κείμενα (raw text) απευθείας από τη MongoDB
+        col_name = getattr(self.collection, 'name', 'CRAN')  # Βρίσκουμε ποια συλλογή τρέχουμε
+        print(f"[{self.model_name}] Ανάκτηση κειμένων από MongoDB (Συλλογή: {col_name})...")
+
+        db = get_db()
+        raw_docs_cursor = db["Documents"].find({"collection": col_name})
+
+        # Φτιάχνουμε ένα λεξικό για αστραπιαία αντιστοίχιση { "ID": "Κείμενο" }
+        text_mapping = {str(d["id"]): d["text"] for d in raw_docs_cursor}
+
+        # Χτίζουμε τη λίστα κειμένων με την ΙΔΙΑ ακριβώς σειρά που τα περιμένει το framework
+        doc_texts = [text_mapping.get(doc_id, "") for doc_id in doc_ids]
+
+        # 3. Υπολογίζουμε τα Embeddings για τα έγγραφα
         print(f"[{self.model_name}] Υπολογισμός εγγράφων (Encoding)...")
-        # To convert_to_tensor=True μας τα δίνει κατευθείαν σε PyTorch Tensors
         self._doc_embeddings = self.encoder.encode(doc_texts, convert_to_tensor=True, show_progress_bar=True)
 
-        # 3. Παίρνουμε τα κείμενα των queries (εξάγουμε το "text" από το dictionary)
+        # 4. Παίρνουμε τα κείμενα των queries
         query_texts = [q["text"] if isinstance(q, dict) else q.text for q in self._queries]
 
-        # 4. Υπολογίζουμε τα Embeddings για τα queries
+        # 5. Υπολογίζουμε τα Embeddings για τα queries
         print(f"[{self.model_name}] Υπολογισμός {len(query_texts)} queries...")
         query_embeddings = self.encoder.encode(query_texts, convert_to_tensor=True)
 
-        # 5. Υπολογίζουμε το Cosine Similarity (Ομοιότητα Συνημιτόνου) ανάμεσα σε ΟΛΑ τα queries και ΟΛΑ τα έγγραφα
-        # Το util.cos_sim βγάζει έναν πίνακα μεγέθους: [αριθμός_queries, αριθμός_εγγράφων]
+        # 6. Υπολογίζουμε το Cosine Similarity (Ομοιότητα Συνημιτόνου)
         print(f"[{self.model_name}] Υπολογισμός Cosine Similarities...")
         cosine_scores = util.cos_sim(query_embeddings, self._doc_embeddings)
 
-        # 6. Μετατρέπουμε τα Tensors σε λίστες από dictionaries για να είναι συμβατά με το evaluate()
+        # 7. Μετατρέπουμε τα Tensors σε λίστες από dictionaries
         for i in range(len(query_texts)):
             query_scores = {}
             for j in range(len(doc_ids)):
-                # Παίρνουμε το σκορ και το μετατρέπουμε σε απλό float (από PyTorch Tensor)
                 score = cosine_scores[i][j].item()
-                if score > 0:  # Κρατάμε μόνο τα θετικά σκορ για εξοικονόμηση μνήμης
+                if score > 0:
                     query_scores[doc_ids[j]] = score
             self._weights.append(query_scores)
 
         return self
 
     def evaluate(self, k=None):
-        """Χρησιμοποιεί τον ίδιο μηχανισμό ταξινόμησης με το TF-IDF/BM25."""
         self.precision = []
         self.recall = []
 
         rel = getattr(self, '_relevant', self.collection.relevant)
 
         for doc_sim, relevant_docs in zip(self._weights, rel):
-            # Ταξινομούμε τα έγγραφα με βάση το Cosine Similarity Score (Φθίνουσα σειρά)
             sorted_docs = [doc_id for doc_id, score in sorted(doc_sim.items(), key=lambda item: item[1], reverse=True)]
 
             cutoff = k if k else len(sorted_docs)
@@ -67,9 +76,6 @@ class SBERTModel(Model):
             self.precision.append(pre)
             self.recall.append(rec)
 
-    # --------------------------------------------------------
-    # Υποχρεωτικές μέθοδοι από το Abstract Base Class (Model)
-    # --------------------------------------------------------
     def get_model(self):
         return self.model_name
 
