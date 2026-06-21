@@ -21,19 +21,31 @@ class SBERTModel(Model):
 
         # 1. Παίρνουμε τα IDs όλων των εγγράφων
         doc_ids = [str(doc.doc_id) for doc in self.collection.docs]
-
         # 2. Φέρνουμε τα αυθεντικά κείμενα (raw text) απευθείας από τη MongoDB
-        col_name = getattr(self.collection, 'name', 'CRAN')  # Βρίσκουμε ποια συλλογή τρέχουμε
+        col_name = getattr(self.collection, 'name', 'CRAN')
         print(f"[{self.model_name}] Ανάκτηση κειμένων από MongoDB (Συλλογή: {col_name})...")
 
         db = get_db()
         raw_docs_cursor = db["Documents"].find({"collection": col_name})
 
-        # Φτιάχνουμε ένα λεξικό για αστραπιαία αντιστοίχιση { "ID": "Κείμενο" }
-        text_mapping = {str(d["id"]): d["text"] for d in raw_docs_cursor}
+        def clean_id(raw_id):
+            """Αφαιρεί τα μηδενικά ('0001' -> '1') αλλά δεν κρασάρει αν έχει γράμματα."""
+            try:
+                return str(int(raw_id))
+            except ValueError:
+                return str(raw_id).strip()
 
-        # Χτίζουμε τη λίστα κειμένων με την ΙΔΙΑ ακριβώς σειρά που τα περιμένει το framework
-        doc_texts = [text_mapping.get(doc_id, "") for doc_id in doc_ids]
+        # Φτιάχνουμε το mapping καθαρίζοντας τα κλειδιά της βάσης
+        text_mapping = {clean_id(d["id"]): d["text"] for d in raw_docs_cursor}
+
+        # Τραβάμε τα κείμενα καθαρίζοντας και τα IDs του framework
+        doc_texts = [text_mapping.get(clean_id(doc_id), "") for doc_id in doc_ids]
+
+        # Safety Check: Αν υπάρχουν κενά κείμενα, το τυπώνουμε στο terminal για να το ξέρουμε!
+        empty_docs = doc_texts.count("")
+        if empty_docs > 0:
+            print(f"[ΠΡΟΣΟΧΗ] Το SBERT δεν βρήκε κείμενο για {empty_docs} έγγραφα στη βάση! Ελέγξτε τα IDs.")
+        # ---------------------------------------------
 
         # 3. Υπολογίζουμε τα Embeddings για τα έγγραφα
         print(f"[{self.model_name}] Υπολογισμός εγγράφων (Encoding)...")
@@ -45,7 +57,7 @@ class SBERTModel(Model):
             if isinstance(q, dict):
                 q_text = q["text"]
             elif isinstance(q, list):
-                q_text = " ".join(q)  # <-- ΕΔΩ ΕΙΝΑΙ Η ΠΡΟΣΘΗΚΗ: Ενώνει τα tokens σε πρόταση!
+                q_text = " ".join(q)
             else:
                 q_text = q.text
             query_texts.append(q_text)
