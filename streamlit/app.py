@@ -190,6 +190,7 @@ def page_run():
                 st.dataframe(df, use_container_width=True)
 
 
+
 # ---------------------------------------------------------------------------
 # Page: Results
 # ---------------------------------------------------------------------------
@@ -197,6 +198,60 @@ def page_run():
 def page_results():
     st.title("📊 Αποθηκευμένα Αποτελέσματα")
 
+    # =====================================================================
+    # 1. ΛΟΓΙΚΗ "ΝΕΑΣ ΣΕΛΙΔΑΣ": Αν έχουμε πατήσει 'View', δείχνουμε το γράφημα
+    # =====================================================================
+    if st.session_state.get("view_result_data"):
+        r = st.session_state["view_result_data"]
+
+        # Κουμπί για επιστροφή στον πίνακα
+        if st.button("⬅️ Επιστροφή στη Λίστα Αποτελεσμάτων"):
+            st.session_state.pop("view_result_data")
+            st.rerun()
+
+        st.divider()
+        st.subheader(f"Ανάλυση: {r.get('model')} — {r.get('collection')}")
+
+        # Εμφάνιση των Metrics
+        col1, col2, col3 = st.columns(3)
+        col1.metric("MAP (mean)", f"{r.get('map_mean', 0):.4f}")
+        col2.metric("MAP (std)", f"{r.get('map_std', 0):.4f}")
+        col3.metric("Χρόνος (sec)", f"{r.get('elapsed_sec', '')}s")
+
+        # Εμφάνιση του Γραφήματος και του Πίνακα Δεδομένων (όπως στο Run)
+        if r.get("precision") and r.get("recall") and len(r["precision"]) > 0:
+            precision_run0 = r["precision"][0]
+            recall_run0 = r["recall"][0]
+
+            df = pd.DataFrame({
+                "Query": range(1, len(precision_run0) + 1),
+                "Precision": precision_run0,
+                "Recall": recall_run0,
+            })
+
+            st.subheader(f"Precision & Recall ανά Query ({r.get('model')} — {r.get('collection')})")
+            fig = px.line(df, x="Query", y=["Precision", "Recall"], markers=True)
+            st.plotly_chart(fig, use_container_width=True)
+
+            with st.expander("📊 Προβολή & Λήψη Αναλυτικών Δεδομένων (Raw Data)"):
+                st.dataframe(df, use_container_width=True)
+                csv = df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Λήψη σε CSV",
+                    data=csv,
+                    file_name=f"results_{r.get('model')}_{r.get('collection')}.csv",
+                    mime='text/csv',
+                    use_container_width=True
+                )
+        else:
+            st.warning("⚠️ Δεν υπάρχουν αποθηκευμένα δεδομένα Precision/Recall για αυτή την εγγραφή.")
+
+        # Σταματάει την εκτέλεση της συνάρτησης εδώ, για να μην σχεδιάσει τον πίνακα από κάτω!
+        return
+
+        # =====================================================================
+    # 2. ΚΑΝΟΝΙΚΗ ΠΡΟΒΟΛΗ (Ο Πίνακας)
+    # =====================================================================
     col1, col2, col3 = st.columns(3)
     with col1:
         model_filter = st.text_input("Φίλτρο μοντέλου", "")
@@ -221,28 +276,26 @@ def page_results():
         return
 
     st.metric("Σύνολο αποτελεσμάτων", data["count"])
-
-    # === ΑΛΛΑΓΗ: Δυναμικός Πίνακας με Γραμμές και Κουμπί 'Delete' ===
-    st.write("")  # Λίγο κενό
+    st.write("")
 
     # 1. Φτιάχνουμε τις κεφαλίδες του πίνακα
-    c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 1, 1, 1, 1, 1.5, 1])
+    c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([2, 1, 1, 1, 1, 1.5, 1, 1])
     c1.markdown("**Μοντέλο**")
     c2.markdown("**Συλλογή**")
     c3.markdown("**MAP**")
     c4.markdown("**Std**")
     c5.markdown("**Runs**")
     c6.markdown("**Χρόνος**")
-    c7.markdown("**Ενέργεια**")
+    c7.markdown("**Ανάλυση**")
+    c8.markdown("**Ενέργεια**")
 
-    # Έντονη διαχωριστική γραμμή κάτω από την κεφαλίδα
+    # Διαχωριστική γραμμή κεφαλίδας
     st.markdown("<hr style='margin: 0; border: 1px solid #666;'>", unsafe_allow_html=True)
 
-    # 2. Γεμίζουμε τις σειρές μία-μία
+    # 2. Γεμίζουμε τις σειρές
     for idx, r in enumerate(results):
-        c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 1, 1, 1, 1, 1.5, 1])
+        c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([2, 1, 1, 1, 1, 1.5, 1, 1])
 
-        # Το st.write τα τοποθετεί μέσα στις στήλες
         c1.write(r.get("model", ""))
         c2.write(r.get("collection", ""))
         c3.write(f"{r.get('map_mean', 0):.4f}")
@@ -250,13 +303,18 @@ def page_results():
         c5.write(str(r.get("runs", "")))
         c6.write(f"{r.get('elapsed_sec', '')}s")
 
-        # Αντικαταστήσαμε το καδάκι με το κείμενο "Delete"
-        if c7.button("Delete", key=f"del_{idx}"):
+        # --- ΤΟ ΚΟΥΜΠΙ VIEW ---
+        if c7.button("View", key=f"view_{idx}"):
+            st.session_state["view_result_data"] = r
+            st.rerun()
+
+        # --- ΤΟ ΚΟΥΜΠΙ DELETE ---
+        if c8.button("Delete", key=f"del_{idx}"):
             res = api_post("/results/delete", {"timestamp": r.get("timestamp")})
             if res:
                 st.rerun()
 
-        # Διακριτική οριζόντια γραμμή (border) κάτω από κάθε σειρά για να "δένει" τον πίνακα
+        # Οριζόντια γραμμή (border) για να χωρίζει όμορφα τις σειρές
         st.markdown("<hr style='margin: 0; border: 0.5px solid #333;'>", unsafe_allow_html=True)
 
 
