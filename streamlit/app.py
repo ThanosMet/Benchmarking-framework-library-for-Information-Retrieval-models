@@ -492,6 +492,9 @@ def main():
         st.markdown("---")
         selected = st.radio("Navigation", list(pages.keys()))
 
+    if selected != "📊 Results" and "view_result_data" in st.session_state:
+        del st.session_state["view_result_data"]
+
     pages[selected]()
 
 
