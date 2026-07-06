@@ -218,6 +218,10 @@ def page_results():
         col2.metric("MAP (std)", f"{r.get('map_std', 0):.4f}")
         col3.metric("Χρόνος (sec)", f"{r.get('elapsed_sec', '')}s")
 
+        if r.get("params"):
+            with st.expander("⚙️ Παράμετροι Εκτέλεσης"):
+                st.json(r["params"])
+
         # Εμφάνιση του Γραφήματος και του Πίνακα Δεδομένων (όπως στο Run)
         if r.get("precision") and r.get("recall") and len(r["precision"]) > 0:
             precision_run0 = r["precision"][0]
