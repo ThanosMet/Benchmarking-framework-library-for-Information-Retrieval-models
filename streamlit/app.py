@@ -222,20 +222,42 @@ def page_results():
 
     st.metric("Σύνολο αποτελεσμάτων", data["count"])
 
-    # Summary table
-    rows = []
-    for r in results:
-        rows.append({
-            "Μοντέλο": r.get("model", ""),
-            "Συλλογή": r.get("collection", ""),
-            "MAP": round(r.get("map_mean", 0), 4),
-            "Std": round(r.get("map_std", 0), 4),
-            "Runs": r.get("runs", ""),
-            "Χρόνος (s)": r.get("elapsed_sec", ""),
-        })
+    # === ΑΛΛΑΓΗ: Δυναμικός Πίνακας με Γραμμές και Κουμπί 'Delete' ===
+    st.write("")  # Λίγο κενό
 
-    df = pd.DataFrame(rows)
-    st.dataframe(df, use_container_width=True)
+    # 1. Φτιάχνουμε τις κεφαλίδες του πίνακα
+    c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 1, 1, 1, 1, 1.5, 1])
+    c1.markdown("**Μοντέλο**")
+    c2.markdown("**Συλλογή**")
+    c3.markdown("**MAP**")
+    c4.markdown("**Std**")
+    c5.markdown("**Runs**")
+    c6.markdown("**Χρόνος**")
+    c7.markdown("**Ενέργεια**")
+
+    # Έντονη διαχωριστική γραμμή κάτω από την κεφαλίδα
+    st.markdown("<hr style='margin: 0; border: 1px solid #666;'>", unsafe_allow_html=True)
+
+    # 2. Γεμίζουμε τις σειρές μία-μία
+    for idx, r in enumerate(results):
+        c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 1, 1, 1, 1, 1.5, 1])
+
+        # Το st.write τα τοποθετεί μέσα στις στήλες
+        c1.write(r.get("model", ""))
+        c2.write(r.get("collection", ""))
+        c3.write(f"{r.get('map_mean', 0):.4f}")
+        c4.write(f"{r.get('map_std', 0):.4f}")
+        c5.write(str(r.get("runs", "")))
+        c6.write(f"{r.get('elapsed_sec', '')}s")
+
+        # Αντικαταστήσαμε το καδάκι με το κείμενο "Delete"
+        if c7.button("Delete", key=f"del_{idx}"):
+            res = api_post("/results/delete", {"timestamp": r.get("timestamp")})
+            if res:
+                st.rerun()
+
+        # Διακριτική οριζόντια γραμμή (border) κάτω από κάθε σειρά για να "δένει" τον πίνακα
+        st.markdown("<hr style='margin: 0; border: 0.5px solid #333;'>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------

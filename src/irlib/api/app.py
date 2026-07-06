@@ -335,6 +335,23 @@ def get_results():
 
 
 # ---------------------------------------------------------------------------
+# POST /results/delete (Διαγραφή συγκεκριμένου αποτελέσματος)
+# ---------------------------------------------------------------------------
+
+@app.route("/results/delete", methods=["POST"])
+def delete_specific_result():
+    data = request.get_json()
+    timestamp = data.get("timestamp")
+    if not timestamp:
+        return jsonify({"error": "Missing timestamp"}), 400
+
+    db = get_db()
+    # Διαγράφει μόνο το συγκεκριμένο αποτέλεσμα που έχει αυτό το timestamp
+    res = db["Results"].delete_one({"timestamp": float(timestamp)})
+    return jsonify({"success": True, "deleted_count": res.deleted_count})
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
