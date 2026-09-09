@@ -90,8 +90,7 @@ def _build_model(model_name: str, col, extra_params: dict):
         return ModelClass(col, clusters=clusters, cond=condition_dict)
 
     elif model_name == "CONGSBW":
-        # ConGSBWindow uses 'cond' instead of 'condition' in its __init__
-        return ModelClass(col, window=window, clusters=clusters, cond=condition_dict)
+        return ModelClass(col, window=window, clusters=clusters, condition=condition_dict)
 
     elif model_name == "GIRTE":
         tensors = bool(int(extra_params.get("tensors", 0)))

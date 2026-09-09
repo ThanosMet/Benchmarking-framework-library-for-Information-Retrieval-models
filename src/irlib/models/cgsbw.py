@@ -2,6 +2,7 @@ from utilities.functions import cluster_graph, prune_graph
 from models.cgsb import ConGSB
 from models.WindowedGSB import WindowedGSBModel as GSBWindow
 import networkx as nx
+import ast
 
 
 # IMPORTANT: due to __mro__, ConGSBWindow searches ConGSB methods first
@@ -52,18 +53,25 @@ class ConGSBWindow(ConGSB, GSBWindow):
 
     """
 
-    def __init__(self, collection, window, clusters, cond={}):
+    def __init__(self, collection, window, clusters, condition={}):
         GSBWindow.__init__(self, collection, window)
 
         # model name
         self.model = self.__class__.__name__
 
+        # Safe parsing if condition is passed as a string
+        if isinstance(condition, str) and condition.strip() != "":
+            try:
+                condition = ast.literal_eval(condition)
+            except Exception:
+                condition = {}
+
         # Cluster the graph and get labels and embeddings
         self.labels, self.embeddings = cluster_graph(self.graph, collection, clusters)
 
-        # Prune the graph
+        # Prune the graph (χρησιμοποιώντας πλέον σωστά το condition)
         self.graph, self.prune_percentage = prune_graph(
-            self.graph, collection, self.labels, self.embeddings, cond
+            self.graph, collection, self.labels, self.embeddings, condition
         )
 
         # Map the labels to the nodes and save them into the graph

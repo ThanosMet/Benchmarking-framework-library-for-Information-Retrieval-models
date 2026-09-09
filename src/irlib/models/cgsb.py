@@ -87,7 +87,7 @@ class ConGSB(GSB):
             self.graph, collection, self.clusters
         )
 
-        # 2. MAP LABELS BEFORE PRUNING (While nodes and labels match exactly 1-to-1)
+        # 2. MAP LABELS BEFORE PRUNING
         import networkx as nx
         cluster_mapping = dict(zip(list(self.graph.nodes()), self.labels))
         nx.set_node_attributes(self.graph, cluster_mapping, "cluster")
@@ -98,8 +98,11 @@ class ConGSB(GSB):
         )
 
         # 4. RE-APPLY THE MAPPING
-        # (Restores attributes to surviving nodes just in case prune_graph wiped them)
         nx.set_node_attributes(self.graph, cluster_mapping, "cluster")
+
+        # --- FIX: Υπολογισμός των νέων _nwk βασισμένων στο κλαδεμένο γράφημα ---
+        self._calculate_nwk()
+        # -----------------------------------------------------------------------
 
         # 5. calculate the new scalar centroids of NWk
         self._cnwk()
