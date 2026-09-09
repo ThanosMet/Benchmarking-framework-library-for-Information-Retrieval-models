@@ -154,15 +154,15 @@ def cluster_graph(graph, collection, n_clstrs):
 def prune_graph(graph, collection, labels, embeddings, condition):
     """
     Prune (or remove) edges from the graph based on certain conditions.
-    
+
     Parameters:
     - graph (networkx.Graph): The input graph.
     - collection: A collection object from infre.preprocess with inverted index information.
     - labels (numpy.array): Labels indicating the cluster of each node.
     - embeddings (DataFrame): Embeddings of nodes.
-    - condition (dict): Condition to decide which edges to prune. 
+    - condition (dict): Condition to decide which edges to prune.
                         It could be based on edge weight or similarity.
-                        
+
     Returns:
     - networkx.Graph: The pruned graph.
     - float: Percentage of pruned edges.
@@ -173,43 +173,67 @@ def prune_graph(graph, collection, labels, embeddings, condition):
 
     # Edges before pruning
     init_edges = graph.number_of_edges()
+    if init_edges == 0:
+        return graph, 0.0
+
     # Track of deleted edges
     cut_edges = 0
 
-    for u, v in graph.edges():
-        c, w = collection.inverted_index[u]['id'], collection.inverted_index[v]['id']
+    # Map graph nodes to their local index to match labels/embeddings dimensions safely
+    node_to_idx = {node: idx for idx, node in enumerate(graph.nodes())}
+
+    for u, v in list(graph.edges()):
+        if u not in node_to_idx or v not in node_to_idx:
+            continue
+
+        c = node_to_idx[u]
+        w = node_to_idx[v]
+
+        # Safety boundary check
+        if c >= len(labels) or w >= len(labels):
+            continue
 
         try:
             cond, threshold = list(condition.items())[0]
-            
+            edge_weight = graph.get_edge_data(u, v).get('weight', 1.0)
+
             if cond == 'edge':
-                edge_weight = graph.get_edge_data(u, v)['weight']
                 flag = edge_weight <= threshold
             elif cond == 'sim':
                 flag = cosine_similarity(embeddings.iloc[c, :].values, embeddings.iloc[w, :].values) <= threshold
-
-        except IndexError:
-            flag = 0
+            else:
+                flag = False
+        except (IndexError, KeyError):
+            flag = False
 
         if labels[c] != labels[w]:
             if flag or not condition:
-                graph.remove_edge(u, v)
-                cut_edges += 1
+                if graph.has_edge(u, v):
+                    graph.remove_edge(u, v)
+                    cut_edges += 1
         else:
-            if cond == 'sim':
-                if cosine_similarity(embeddings.iloc[c, :].values, embeddings.iloc[w, :].values) <= 2 * np.abs(threshold):
-                    graph.remove_edge(u, v)
-                    cut_edges += 1
-            elif cond == 'edge':
-                if edge_weight <= 2 * threshold:
-                    graph.remove_edge(u, v)
-                    cut_edges += 1
+            try:
+                if cond == 'sim':
+                    if cosine_similarity(embeddings.iloc[c, :].values, embeddings.iloc[w, :].values) <= 2 * np.abs(
+                            threshold):
+                        if graph.has_edge(u, v):
+                            graph.remove_edge(u, v)
+                            cut_edges += 1
+                elif cond == 'edge':
+                    if edge_weight <= 2 * threshold:
+                        if graph.has_edge(u, v):
+                            graph.remove_edge(u, v)
+                            cut_edges += 1
+            except UnboundLocalError:
+                pass
 
-        graph.add_node(u, cluster=labels[c])
-        graph.add_node(v, cluster=labels[w])
+        if u in graph.nodes:
+            graph.nodes[u]['cluster'] = labels[c]
+        if v in graph.nodes:
+            graph.nodes[v]['cluster'] = labels[w]
 
-    prune_percentage = cut_edges/init_edges*100
-    print(f"{prune_percentage} % pruning. {cut_edges} edges were pruned out of {init_edges}.")
+    prune_percentage = (cut_edges / init_edges) * 100 if init_edges > 0 else 0.0
+    print(f"{prune_percentage:.4f} % pruning. {cut_edges} edges were pruned out of {init_edges}.")
 
     return graph, prune_percentage
 

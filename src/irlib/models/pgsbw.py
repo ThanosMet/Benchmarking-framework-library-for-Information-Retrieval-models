@@ -1,43 +1,45 @@
 from models.WindowedGSB import WindowedGSBModel as GSBWindow
 from models.Model import Model as BaseIRModel
 from utilities.functions import cluster_graph, prune_graph
+import ast
+
 
 class PGSBW(GSBWindow, BaseIRModel):
     """
     Pruned Graphical Set-Based Window (PGSBW) Information Retrieval Model.
-    Extends the GSBWindow model by introducing graph pruning and clustering while 
+    Extends the GSBWindow model by introducing graph pruning and clustering while
     considering a windowed approach on the collection's terms.
 
     Parameters:
     -----------
     collection : object
         The collection over which IR tasks will be performed.
-        
+
     window : int or float
         The size of the window to consider while processing terms.
         - If an integer, it represents the number of terms.
         - If a float, it represents the proportion of terms in a document.
-    
+
     clusters : int
         Number of clusters to be used for the union graph.
 
-    condition : dict, optional (default={})
+    condition : dict or str, optional (default={})
         Pruning conditions for the graph. Can specify conditions in the form {'edge': value} or {'sim': value}.
 
     Attributes:
     -----------
     model : str
         Name of the model.
-    
+
     labels : ndarray
         Cluster labels for the nodes of the graph.
-        
+
     embeddings : ndarray
         Embeddings corresponding to the nodes of the graph.
-    
+
     graph : object
         The pruned union graph based on the windowed approach.
-    
+
     prune_percentage : float
         Percentage of the graph that has been pruned.
 
@@ -45,8 +47,8 @@ class PGSBW(GSBWindow, BaseIRModel):
     --------
     _model() -> str :
         Returns the class name of the model.
-
     """
+
     def __init__(self, collection, window, clusters, condition={}):
 
         GSBWindow.__init__(self, collection, window)
@@ -54,9 +56,18 @@ class PGSBW(GSBWindow, BaseIRModel):
         # model name
         self.model = self.__class__.__name__
 
+        # Safe parsing if condition is passed as a string
+        if isinstance(condition, str) and condition.strip() != "":
+            try:
+                condition = ast.literal_eval(condition)
+            except Exception:
+                condition = {}
+
         # Cluster the graph and get labels and embeddings
         self.labels, self.embeddings = cluster_graph(self.graph, collection, clusters)
 
         # Prune the graph
         self.graph, self.prune_percentage = prune_graph(self.graph, collection, self.labels, self.embeddings, condition)
 
+        # Crucial fix: Recalculate node term weights based on the pruned graph structure
+        self._nwk = self._calculate_nwk()

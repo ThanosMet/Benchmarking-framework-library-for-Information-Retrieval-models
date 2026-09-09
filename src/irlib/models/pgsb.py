@@ -42,12 +42,9 @@ class PGSB(GSB, BaseIRModel):
         # Cluster the graph and get labels and embeddings
         self.labels, self.embeddings = cluster_graph(self.graph, collection, clusters)
 
-        print(f"Ακμές ΠΡΙΝ το pruning (Clusters: {clusters}, Condition: {condition}):", self.graph.number_of_edges())
-
         # Prune the graph
         self.graph, self.prune_percentage = prune_graph(self.graph, collection, self.labels, self.embeddings, condition)
 
-        print("Ακμές ΜΕΤΑ το pruning:", self.graph.number_of_edges())
         self._nwk = self._calculate_nwk()
 
     def _model(self):
