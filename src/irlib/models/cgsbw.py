@@ -66,19 +66,25 @@ class ConGSBWindow(ConGSB, GSBWindow):
             except Exception:
                 condition = {}
 
-        # Cluster the graph and get labels and embeddings
+        # 1. Cluster the graph and get labels and embeddings
         self.labels, self.embeddings = cluster_graph(self.graph, collection, clusters)
 
-        # Prune the graph (χρησιμοποιώντας πλέον σωστά το condition)
+        # 2. Map labels before pruning
+        cluster_mapping = dict(zip(list(self.graph.nodes()), self.labels))
+        nx.set_node_attributes(self.graph, cluster_mapping, "cluster")
+
+        # 3. Prune the graph
         self.graph, self.prune_percentage = prune_graph(
             self.graph, collection, self.labels, self.embeddings, condition
         )
 
-        # Map the labels to the nodes and save them into the graph
-        cluster_mapping = dict(zip(self.graph.nodes(), self.labels))
+        # 4. Re-apply mapping
         nx.set_node_attributes(self.graph, cluster_mapping, "cluster")
 
-        # NW Weight of GSBs
+        # 5. CRITICAL FIX: Υπολογισμός των νέων _nwk μετά το κλάδεμα του windowed γραφήματος
+        self._calculate_nwk()
+
+        # 6. Calculate contextual weights (_cnwk)
         self._cnwk()
 
     def _model(self) -> str:
