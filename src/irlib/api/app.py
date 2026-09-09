@@ -19,6 +19,7 @@ Endpoints:
 import sys
 import time
 import traceback
+import ast
 from pathlib import Path
 
 # Path setup — ώστε να βρίσκονται models, utilities, Preprocess
@@ -61,11 +62,17 @@ def _build_model(model_name: str, col, extra_params: dict):
     # 2. Parse Clusters safely
     clusters = int(extra_params.get("clusters", 5))
 
-    # 3. Parse Condition safely (assuming frontend sends it as a JSON string like '{"edge": 0.5}')
-    condition_str = extra_params.get("condition", "{}")
-    try:
-        condition_dict = json.loads(condition_str.replace("'", '"'))
-    except Exception:
+    # 3. Parse Condition safely
+    condition_raw = extra_params.get("condition", {})
+
+    if isinstance(condition_raw, dict):
+        condition_dict = condition_raw
+    elif isinstance(condition_raw, str) and condition_raw.strip() != "":
+        try:
+            condition_dict = ast.literal_eval(condition_raw)
+        except Exception:
+            condition_dict = {}
+    else:
         condition_dict = {}
 
     # 4. Route to the correct constructor based on what the model requires
