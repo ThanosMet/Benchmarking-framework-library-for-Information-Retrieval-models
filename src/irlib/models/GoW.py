@@ -46,13 +46,11 @@ class Gow(Model):
         dv = vec[:self.collection.num_docs]
         return qv, dv
 
-    # ΑΛΛΑΓΗ 1: queries=None default + stopwords parameter για συμβατότητα με API/runner
     def fit(self, queries=None, min_freq=None, stopwords=False, *args, **kwargs) -> "Gow":
         if queries is None:
             queries = self._queries
 
-        # ΑΛΛΑΓΗ 2: αφαίρεση import dubg (ελληνικοί χαρακτήρες) — δεν χρειάζεται
-        # ΑΛΛΑΓΗ 1 (συνέχεια): stopwords φιλτράρισμα
+        # Φιλτράρισμα stopwords
         if stopwords:
             queries = [
                 [w for w in q if w not in self.collection.stopwords]
@@ -64,14 +62,11 @@ class Gow(Model):
 
         print(f"[GoW] Building corpus from {len(self.collection.docs)} docs + {len(queries)} queries...")
 
-        prev_doc = self.collection.docs[0]
-        text = [" ".join(prev_doc.terms)]
-        for doc in self.collection.docs[1:]:
-            if doc.doc_id != prev_doc.doc_id + 1:
-                text.append(" ")
-                print(f"  [GoW] gap: doc_id={doc.doc_id}, prev={prev_doc.doc_id}")
-            text.append(" ".join(doc.terms))
-            prev_doc = doc
+        # Δημιουργία λίστας με ακριβές μέγεθος για να μην χάνονται τα κενά doc_ids
+        text = [""] * self.collection.num_docs
+
+        for doc in self.collection.docs:
+            text[doc.doc_id - 1] = " ".join(doc.terms)
 
         for q in queries:
             text.append(" ".join(q))
@@ -88,8 +83,7 @@ class Gow(Model):
 
             eval_list = sorted(eval_list, key=lambda x: x[1], reverse=True)
 
-            # ΑΛΛΑΓΗ 3: +1 για 1-based doc_ids — ώστε να ταιριάζει με το relevant[]
-            # (το relevant έχει [139, 1222, ...] ενώ το i είναι 0-based index)
+            # +1 για να ταιριάζει το index με το πραγματικό doc_id (1-based)
             ordered_docs = [tup[0] + 1 for tup in eval_list]
 
             self.ranking.append(ordered_docs)
