@@ -72,18 +72,30 @@ class BM25Model(Model):
 
         return self
 
-    def evaluate(self, k=None):
-        # print(len(self._queryVectors))
-        # print(self._queryVectors)
+    def evaluate(self, k=10):
+        self.precision = []
+        self.recall = []
+        self.average_precision = []
+        self.mrr = []
+
         for j, q in enumerate(self._queryVectors):
-            document_similarities = evaluate_bm25_score(q, self._docVectors)
-            #print(len(document_similarities.keys()))
-            self.ranking.append(list(document_similarities.keys()))
-            if k is None: k = len(list(document_similarities.keys()))
-            print(k)
-            # print(f"j:{j}, {len(self.collection.relevant[j])}")
-            pre, rec, mrr = calc_precision_recall(document_similarities.keys(), self.collection.relevant[j], k)
-            self.precision.append(pre)
-            self.recall.append(rec)
-            # if j > 0: break
+            document_similarities = evaluate_bm25_score(
+                q,
+                self._docVectors
+            )
+
+            ranked_docs = list(document_similarities.keys())
+            self.ranking.append(ranked_docs)
+
+            pre, rec, ap, mrr = calc_precision_recall(
+                ranked_docs,
+                self.collection.relevant[j],
+                k
+            )
+
+            self.precision.append(round(pre, 8))
+            self.recall.append(round(rec, 8))
+            self.average_precision.append(round(ap, 8))
+            self.mrr.append(round(mrr, 8))
+
         return self

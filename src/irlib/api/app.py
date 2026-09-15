@@ -92,21 +92,6 @@ def _build_model(model_name: str, col, extra_params: dict):
     elif model_name == "CONGSBW":
         return ModelClass(col, window=window, clusters=clusters, condition=condition_dict)
 
-    elif model_name == "GIRTE":
-        tensors = bool(int(extra_params.get("tensors", 0)))
-        bert = str(extra_params.get("bert", "base"))
-        theta_val = float(extra_params.get("theta_val", 0.0))
-        k_core_bool = bool(int(extra_params.get("k_core_bool", 0)))
-        h_val = float(extra_params.get("h_val", 1.0))
-
-        return ModelClass(
-            col,
-            tensors=tensors,
-            bert=bert,
-            theta_val=theta_val,
-            k_core_bool=k_core_bool,
-            h_val=h_val
-        )
 
     elif model_name == "PYLATE":
         pretrained_model = str(extra_params.get("pretrained_model", "lightonai/colbertv2.0"))
@@ -123,31 +108,63 @@ def _run_single(model_name: str, collection_name: str,
     col = build_collection_from_mongo(collection_name)
 
     map_scores = []
+
     all_precision = []
     all_recall = []
+    all_average_precision = []
+    all_mrr = []
+
     total_start = time.time()
 
     for i in range(runs):
         model = _build_model(model_name, col, extra_params)
-        model.fit(min_freq=min_freq, stopwords=stopwords)
+
+        model.fit(
+            min_freq=min_freq,
+            stopwords=stopwords
+        )
+
         model.evaluate(k=k)
-        map_scores.append(float(mean(model.precision)))
-        all_precision.append([round(float(p), 6) for p in model.precision])
-        all_recall.append([round(float(r), 6) for r in model.recall])
+
+        # MAP = mean Average Precision over all queries
+        run_map = float(mean(model.average_precision))
+        map_scores.append(run_map)
+
+        # Per-query metrics
+        all_precision.append(
+            [round(float(p), 6) for p in model.precision]
+        )
+
+        all_recall.append(
+            [round(float(r), 6) for r in model.recall]
+        )
+
+        all_average_precision.append(
+            [round(float(ap), 6) for ap in model.average_precision]
+        )
+
+        all_mrr.append(
+            [round(float(rr), 6) for rr in model.mrr]
+        )
 
     elapsed = round(time.time() - total_start, 2)
 
     return {
-        "model":       model_name,
-        "collection":  collection_name,
-        "runs":        runs,
-        "map_mean":    round(float(mean(map_scores)), 6),
-        "map_std":     round(float(std(map_scores)), 6),
+        "model": model_name,
+        "collection": collection_name,
+        "runs": runs,
+
+        "map_mean": round(float(mean(map_scores)), 6),
+        "map_std": round(float(std(map_scores)), 6),
         "map_per_run": [round(s, 6) for s in map_scores],
-        "precision":   all_precision,
-        "recall":      all_recall,
+
+        "precision": all_precision,
+        "recall": all_recall,
+        "average_precision": all_average_precision,
+        "mrr": all_mrr,
+
         "elapsed_sec": elapsed,
-        "params":      extra_params,
+        "params": extra_params,
     }
 
 
@@ -188,27 +205,23 @@ def get_model_params():
     window_param = {"name": "window", "type": "number", "default": 8, "help": "Window size (int/float)"}
     clusters_param = {"name": "clusters", "type": "number", "default": 5, "help": "Number of clusters"}
     cond_param = {"name": "condition", "type": "string", "default": "{}", "help": "JSON string eg: {'edge': 0.5}"}
-    tensors_param = {"name": "tensors", "type": "number", "default": 0,"help": "1 for True (BERT Tensors), 0 for False"}
-    bert_param = {"name": "bert", "type": "string", "default": "base", "help": "'base' or 'large'"}
-    theta_param = {"name": "theta_val", "type": "number", "default": 0.0,"help": "Cosine similarity threshold (e.g., 0.5)"}
-    kcore_param = {"name": "k_core_bool", "type": "number", "default": 0, "help": "1 for True, 0 for False"}
-    hval_param = {"name": "h_val", "type": "number", "default": 1.0, "help": "h value modifier"}
     pylate_param = {"name": "pretrained_model", "type": "string", "default": "lightonai/colbertv2.0",
                     "help": "HuggingFace model ID (e.g., lightonai/colbertv2.0)"}
 
     params = {
-        "GSB":         [],
-        "BM25":        [],
-        "GOW":         [],
+        "GSB": [],
+        "BM25": [],
+        "GOW": [],
+        "TFIDF": [],
+        "SBERT": [],
+        "LSI": [],
         "WINDOWEDGSB": [window_param],
         "GSBWINDOW": [window_param],
         "PGSB": [clusters_param, cond_param],
         "PGSBW": [window_param, clusters_param, cond_param],
         "CONGSB": [clusters_param, cond_param],
         "CONGSBW": [window_param, clusters_param, cond_param],
-        "GIRTE": [tensors_param, bert_param, theta_param, kcore_param, hval_param],
-        "PYLATE": [pylate_param]
-
+        "PYLATE": [pylate_param],
     }
     return jsonify(params)
 
@@ -240,7 +253,12 @@ def run_model():
     model_name      = data["model"].upper()
     collection_name = data["collection"].upper()
     runs            = int(data.get("runs", 1))
-    k               = data.get("k", None)
+    k = data.get("k", 10)
+
+    if k is None:
+        k = 10
+    else:
+        k = int(k)
     stopwords       = bool(data.get("stopwords", True))
     min_freq        = int(data.get("min_freq", 1))
     save            = bool(data.get("save", False))
@@ -287,7 +305,12 @@ def compare_models():
     models_list     = [m.upper() for m in data["models"]]
     collection_name = data["collection"].upper()
     runs            = int(data.get("runs", 1))
-    k               = data.get("k", None)
+    k = data.get("k", 10)
+
+    if k is None:
+        k = 10
+    else:
+        k = int(k)
     stopwords       = bool(data.get("stopwords", True))
     min_freq        = int(data.get("min_freq", 1))
     save            = bool(data.get("save", False))

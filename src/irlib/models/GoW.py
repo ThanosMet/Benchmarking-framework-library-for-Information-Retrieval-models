@@ -90,8 +90,10 @@ class Gow(Model):
             if k is None:
                 k = len(ordered_docs)
 
-            pre, rec, mrr = calc_precision_recall(ordered_docs, self.collection.relevant[j], k)
-            self.precision.append(pre)
-            self.recall.append(rec)
+            pre, rec, ap, mrr = calc_precision_recall(ordered_docs, self.collection.relevant[j], k)
+            self.precision.append(round(pre, 8))
+            self.recall.append(round(rec, 8))
+            self.average_precision.append(round(ap, 8))
+            self.mrr.append(round(mrr, 8))
 
         return array(self.precision), array(self.recall)

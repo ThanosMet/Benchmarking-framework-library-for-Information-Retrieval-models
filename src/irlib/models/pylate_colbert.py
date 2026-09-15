@@ -70,26 +70,36 @@ class PyLateColBERT(Model):
     # --------------------------------------------------------
     # Override the Evaluate Method
     # --------------------------------------------------------
-    def evaluate(self, k=None):
-        """Overrides the parent evaluate to bypass vector/graph requirements."""
+    def evaluate(self, k=10):
         self.precision = []
         self.recall = []
+        self.average_precision = []
+        self.mrr = []
 
-        # Safely get the relevance list
         rel = getattr(self, '_relevant', self.collection.relevant)
 
         for doc_sim, relevant_docs in zip(self._weights, rel):
-            # Sort documents by their ColBERT score (highest first)
-            sorted_docs = [doc_id for doc_id, score in sorted(doc_sim.items(), key=lambda item: item[1], reverse=True)]
+            sorted_docs = [
+                doc_id
+                for doc_id, score in sorted(
+                    doc_sim.items(),
+                    key=lambda item: item[1],
+                    reverse=True
+                )
+            ]
 
-            # Apply the top-k cutoff
-            cutoff = k if k else len(sorted_docs)
+            pre, rec, ap, mrr = calc_precision_recall(
+                sorted_docs,
+                relevant_docs,
+                k
+            )
 
-            # Calculate metrics using the framework's built-in utility
-            pre, rec, mrr = calc_precision_recall(sorted_docs, relevant_docs, cutoff)
+            self.precision.append(round(pre, 8))
+            self.recall.append(round(rec, 8))
+            self.average_precision.append(round(ap, 8))
+            self.mrr.append(round(mrr, 8))
 
-            self.precision.append(pre)
-            self.recall.append(rec)
+        return self
 
     # --------------------------------------------------------
     # Fulfill the Abstract Base Class Requirements

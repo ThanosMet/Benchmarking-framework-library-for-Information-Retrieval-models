@@ -87,21 +87,36 @@ class LSIModel(Model):
 
         return self
 
-    def evaluate(self, k=None):
+    def evaluate(self, k=10):
         self.precision = []
         self.recall = []
+        self.average_precision = []
+        self.mrr = []
 
         rel = getattr(self, '_relevant', self.collection.relevant)
 
         for doc_sim, relevant_docs in zip(self._weights, rel):
-            # Φθίνουσα ταξινόμηση
-            sorted_docs = [doc_id for doc_id, score in sorted(doc_sim.items(), key=lambda item: item[1], reverse=True)]
+            sorted_docs = [
+                doc_id
+                for doc_id, score in sorted(
+                    doc_sim.items(),
+                    key=lambda item: item[1],
+                    reverse=True
+                )
+            ]
 
-            cutoff = k if k else len(sorted_docs)
-            pre, rec, mrr = calc_precision_recall(sorted_docs, relevant_docs, cutoff)
+            pre, rec, ap, mrr = calc_precision_recall(
+                sorted_docs,
+                relevant_docs,
+                k
+            )
 
-            self.precision.append(pre)
-            self.recall.append(rec)
+            self.precision.append(round(pre, 8))
+            self.recall.append(round(rec, 8))
+            self.average_precision.append(round(ap, 8))
+            self.mrr.append(round(mrr, 8))
+
+        return self
 
     def get_model(self):
         return self.model_name

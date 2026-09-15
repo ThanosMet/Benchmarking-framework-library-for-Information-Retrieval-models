@@ -47,6 +47,8 @@ class Model(ABC):
         # metrics
         self.precision = []
         self.recall = []
+        self.average_precision = []
+        self.mrr = []
         # model_document_ranking
         self.ranking = []
 
@@ -146,27 +148,41 @@ class Model(ABC):
 
         return array(tf_ij)
 
-    def evaluate(self, k=None):
+    def evaluate(self, k=10):
         number_of_queries = len(self._queryVectors)
-        # for each query and (dtm, relevant) pair
-        for i, (qv, dv, rel) in enumerate(zip(self._queryVectors, self._docVectors, self._relevant)):
-            
 
+        self.precision = []
+        self.recall = []
+        self.average_precision = []
+        self.mrr = []
+
+        for i, (qv, dv, rel) in enumerate(
+                zip(self._queryVectors, self._docVectors, self._relevant)
+        ):
             dtsm = self._vectorizer(dv, qv, self._weights[i])
-            # print(dtsm)
-            # print(len(self._docVectors[i][0]))
-            # cosine similarity between query and every document
+
             document_similarities = evaluate_sim(qv, dtsm)
-            # print(document_similarities)
-            self.ranking.append(list(document_similarities.keys()))
-            if k is None:
-                k = len(document_similarities.keys())
-                # print(F"k for MODEL is {k}")
-            pre, rec, mrr = calc_precision_recall(document_similarities.keys(), rel, k)
-            print(f"=> Query {i + 1}/{number_of_queries}, precision = {pre:.3f}, recall = {rec:.3f}")
+
+            self.ranking.append(
+                list(document_similarities.keys())
+            )
+
+            pre, rec, ap, mrr = calc_precision_recall(
+                document_similarities.keys(),
+                rel,
+                k
+            )
+
+            print(
+                f"=> Query {i + 1}/{number_of_queries}, "
+                f"P@{k} = {pre:.3f}, R@{k} = {rec:.3f}, AP = {ap:.3f}"
+            )
+
             self.precision.append(round(pre, 8))
             self.recall.append(round(rec, 8))
-            # if i > 1: break
+            self.average_precision.append(round(ap, 8))
+            self.mrr.append(round(mrr, 8))
+
         return array(self.precision), array(self.recall)
 
     def results_to_df(self):

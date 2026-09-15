@@ -95,37 +95,68 @@ def cosine_similarity(u, v):
         return dot(u, v) / (norm(u) * norm(v))
 
 
-def calc_precision_recall(doc_sims, relevant, k):
-   # print(len(doc_sims))
-    cnt = 0
-    retrieved = 1
-    recall = []
-    precision = []
-    mrr = 0
-    for doc in doc_sims:
-        if doc in relevant:
-            cnt += 1
-            p = cnt / retrieved
-            if cnt == 1:
-                mrr = p
-            r = cnt / len(relevant)
-            precision += [p]
-            recall += [r]
-        retrieved += 1
-        if retrieved == k:
-            break
+def calc_precision_recall(doc_sims, relevant, k=10):
+    """
+    Calculates:
+      - Precision@k
+      - Recall@k
+      - Average Precision (AP) over the FULL ranking
+      - Reciprocal Rank (RR) over the FULL ranking
 
-    try:
-        avg_pre = sum(precision) / len(precision)
-    except ZeroDivisionError:
-        avg_pre = 0
-    try:
-        avg_rec = sum(recall) / len(recall)
-    except ZeroDivisionError:
-        avg_rec = 0
-    if avg_rec == 0 or avg_pre == 0:
-        print(f"Doc SIM: {doc_sims}\nRel:{relevant}\nret:{retrieved}")
-    return avg_pre, avg_rec, mrr
+    MAP is calculated later as the mean AP across all queries.
+    """
+
+    ranked_docs = list(doc_sims)
+    relevant_set = set(relevant)
+
+    if not ranked_docs or not relevant_set:
+        return 0.0, 0.0, 0.0, 0.0
+
+    # ---------------------------------------------------------
+    # 1. Precision@k and Recall@k
+    # ---------------------------------------------------------
+    if k is None or k <= 0:
+        k = 10
+
+    cutoff = min(int(k), len(ranked_docs))
+    top_k_docs = ranked_docs[:cutoff]
+
+    relevant_at_k = sum(
+        1 for doc_id in top_k_docs
+        if doc_id in relevant_set
+    )
+
+    precision_at_k = relevant_at_k / cutoff
+    recall_at_k = relevant_at_k / len(relevant_set)
+
+    # ---------------------------------------------------------
+    # 2. Average Precision over FULL ranking
+    # ---------------------------------------------------------
+    relevant_found = 0
+    precision_sum = 0.0
+    reciprocal_rank = 0.0
+
+    for rank, doc_id in enumerate(ranked_docs, start=1):
+
+        if doc_id in relevant_set:
+            relevant_found += 1
+
+            precision_at_rank = relevant_found / rank
+            precision_sum += precision_at_rank
+
+            # First relevant result -> Reciprocal Rank
+            if reciprocal_rank == 0.0:
+                reciprocal_rank = 1.0 / rank
+
+    # Relevant documents that were not retrieved contribute 0
+    average_precision = precision_sum / len(relevant_set)
+
+    return (
+        precision_at_k,
+        recall_at_k,
+        average_precision,
+        reciprocal_rank
+    )
 
 
 # write list to binary file
