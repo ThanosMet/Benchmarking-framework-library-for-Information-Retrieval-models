@@ -5,6 +5,8 @@ from models.Model import Model
 from utilities.document_utls import cosine_similarity, calc_precision_recall
 from typing import Optional, Any
 from numpy import array, ndarray
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
 
 
 class Gow(Model):
@@ -36,14 +38,25 @@ class Gow(Model):
     def _vectorizer(self, tsf_ij: ndarray, idf: ndarray, *args: Any) -> ndarray:
         raise NotImplementedError("Gow model does not implement _vectorizer directly, use _generate_vectors instead.")
 
-    def _generate_vectors(self, **kwargs) -> tuple[ndarray, ndarray]:
-        text = kwargs.get('Text')
+    def _generate_vectors(self, **kwargs):
+        text = kwargs.get("Text")
+
         if not text or not isinstance(text, list):
             raise ValueError("Text must be provided as a list of strings.")
 
-        vec = self.vectorizer.fit_transform(text).todense()
+        print("[GoW] Vectorizing corpus...")
+
+        # Keep sparse - DO NOT convert to dense
+        vec = self.vectorizer.fit_transform(text)
+
+        print(
+            f"[GoW] Matrix ready: "
+            f"{vec.shape[0]} rows x {vec.shape[1]} features"
+        )
+
         qv = vec[self.collection.num_docs:]
         dv = vec[:self.collection.num_docs]
+
         return qv, dv
 
     def fit(self, queries=None, min_freq=None, stopwords=False, *args, **kwargs) -> "Gow":
@@ -74,23 +87,37 @@ class Gow(Model):
         self._queryVectors, self._docVectors = self._generate_vectors(Text=text)
         return self
 
-    def evaluate(self, k=None) -> tuple[ndarray, ndarray]:
-        for j, q in enumerate(self._queryVectors):
-            eval_list = []
-            for i in range(len(self._docVectors)):
-                score = cosine_similarity(q, self._docVectors[i, :].transpose())
-                eval_list.append((i, float(score)))
+    def evaluate(self, k=10):
+        self.precision = []
+        self.recall = []
+        self.average_precision = []
+        self.mrr = []
 
-            eval_list = sorted(eval_list, key=lambda x: x[1], reverse=True)
+        print("[GoW] Calculating query-document similarities...")
 
-            # +1 για να ταιριάζει το index με το πραγματικό doc_id (1-based)
-            ordered_docs = [tup[0] + 1 for tup in eval_list]
+        # 93 x 11429 for NPL - completely manageable
+        similarities = sklearn_cosine_similarity(
+            self._queryVectors,
+            self._docVectors
+        )
+
+        print(f"[GoW] Similarity matrix: {similarities.shape}")
+
+        for j, scores in enumerate(similarities):
+            # Sort highest score first
+            ranking_indices = np.argsort(-scores)
+
+            # Matrix index 0 corresponds to document ID 1
+            ordered_docs = (ranking_indices + 1).tolist()
 
             self.ranking.append(ordered_docs)
-            if k is None:
-                k = len(ordered_docs)
 
-            pre, rec, ap, mrr = calc_precision_recall(ordered_docs, self.collection.relevant[j], k)
+            pre, rec, ap, mrr = calc_precision_recall(
+                ordered_docs,
+                self.collection.relevant[j],
+                k
+            )
+
             self.precision.append(round(pre, 8))
             self.recall.append(round(rec, 8))
             self.average_precision.append(round(ap, 8))

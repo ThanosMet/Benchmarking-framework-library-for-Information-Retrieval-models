@@ -57,7 +57,7 @@ class GSBModel(Model):
                     # I am using 1 so it doesn't zero out the multiplication (temp *= 1)
                     nwk_score = inverted_index[term].get('nwk', 1.0)
                     temp *= nwk_score
-            tns[i] = round(temp, 3)
+            tns[i] = temp
         return tns
 
 
@@ -164,7 +164,7 @@ class GSBModel(Model):
 
                 f = float64(a * Wout[term] / ((Win[term] + 1) * (ngb[term] + 1)))
                 s = float64(b / (ngb[term] + 1))
-                score = round(log2(1 + f) * log2(1 + s), 3)
+                score = log2(1 + f) * log2(1 + s)
         
             except (ValueError, ZeroDivisionError) as e:
                 print(f"Error calculating nwk for term '{term}': {e}")

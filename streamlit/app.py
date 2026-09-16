@@ -36,7 +36,7 @@ def api_get(endpoint: str):
 
 def api_post(endpoint: str, payload: dict):
     try:
-        r = requests.post(f"{API_URL}{endpoint}", json=payload, timeout=600)
+        r = requests.post(f"{API_URL}{endpoint}", json=payload, timeout=None)
         r.raise_for_status()
         return r.json()
     except requests.exceptions.ConnectionError:
