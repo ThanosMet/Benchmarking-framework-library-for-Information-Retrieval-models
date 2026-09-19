@@ -110,13 +110,20 @@ def page_run():
     with col_c:
         collection = st.selectbox("Collection", collections)
 
+    st.caption("MAP is always computed over the full ranking; k affects only Precision@k and Recall@k.")
+
     # --- 2. PARAMETERS FORM ---
     with st.form("run_form"):
         col1, col2 = st.columns(2)
 
         with col1:
             runs = st.number_input("Number of runs", min_value=1, max_value=10, value=1)
-            k = st.number_input("Cutoff k (0 = all docs)", min_value=0, value=0)
+            k = st.number_input(
+                "Precision / Recall cutoff k",
+                min_value=1,
+                value=10,
+                help="Affects Precision@k and Recall@k only. MAP is computed over the full ranking.",
+            )
         with col2:
             stopwords = st.checkbox("Stopwords", value=True)
             min_freq = st.number_input("Min frequency (apriori)", min_value=1, value=1)
@@ -148,7 +155,7 @@ def page_run():
             "model": model,
             "collection": collection,
             "runs": runs,
-            "k": k if k > 0 else None,
+            "k": int(k),
             "stopwords": stopwords,
             "min_freq": min_freq,
             "save": save,
@@ -164,26 +171,38 @@ def page_run():
             st.session_state["last_model"] = model
 
             # --- Metrics ---
-            col1, col2, col3 = st.columns(3)
+            total_time = float(result.get("elapsed_sec", 0))
+            result_runs = max(int(result.get("runs", runs)), 1)
+            avg_time_per_run = total_time / result_runs
+
+            col1, col2, col3, col4 = st.columns(4)
             col1.metric("MAP (mean)", f"{result['map_mean']:.4f}")
             col2.metric("MAP (std)", f"{result['map_std']:.4f}")
-            col3.metric("Time", f"{result['elapsed_sec']}s")
+            col3.metric("Avg Time / Run", f"{avg_time_per_run:.2f}s")
+            col4.metric("Total Time", f"{total_time:.2f}s")
 
             # --- Precision/Recall per query (run_0) ---
             if result.get("precision"):
                 precision_run0 = result["precision"][0]
                 recall_run0 = result["recall"][0]
 
+                precision_label = f"Precision@{k}"
+                recall_label = f"Recall@{k}"
+
                 df = pd.DataFrame({
                     "Query": range(1, len(precision_run0) + 1),
-                    "Precision": precision_run0,
-                    "Recall": recall_run0,
+                    precision_label: precision_run0,
+                    recall_label: recall_run0,
                 })
 
-                st.subheader("Precision & Recall per Query (Run 1)")
-                fig = px.line(df, x="Query", y=["Precision", "Recall"],
-                              title=f"{model} — {collection}",
-                              markers=True)
+                st.subheader(f"Precision@{k} & Recall@{k} per Query (Run 1)")
+                fig = px.line(
+                    df,
+                    x="Query",
+                    y=[precision_label, recall_label],
+                    title=f"{model} — {collection}",
+                    markers=True,
+                )
                 st.plotly_chart(fig, use_container_width=True)
 
                 st.subheader("Data")
@@ -213,10 +232,15 @@ def page_results():
         st.subheader(f"Analysis: {r.get('model')} — {r.get('collection')}")
 
         # Display Metrics
-        col1, col2, col3 = st.columns(3)
+        total_time = float(r.get("elapsed_sec", 0) or 0)
+        result_runs = max(int(r.get("runs", 1) or 1), 1)
+        avg_time_per_run = total_time / result_runs
+
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("MAP (mean)", f"{r.get('map_mean', 0):.4f}")
         col2.metric("MAP (std)", f"{r.get('map_std', 0):.4f}")
-        col3.metric("Time (sec)", f"{r.get('elapsed_sec', '')}s")
+        col3.metric("Avg Time / Run", f"{avg_time_per_run:.2f}s")
+        col4.metric("Total Time", f"{total_time:.2f}s")
 
         if r.get("params"):
             with st.expander("⚙️ Execution Parameters"):
@@ -227,14 +251,26 @@ def page_results():
             precision_run0 = r["precision"][0]
             recall_run0 = r["recall"][0]
 
+            saved_k = int(r.get("k", 10) or 10)
+            precision_label = f"Precision@{saved_k}"
+            recall_label = f"Recall@{saved_k}"
+
             df = pd.DataFrame({
                 "Query": range(1, len(precision_run0) + 1),
-                "Precision": precision_run0,
-                "Recall": recall_run0,
+                precision_label: precision_run0,
+                recall_label: recall_run0,
             })
 
-            st.subheader(f"Precision & Recall per Query ({r.get('model')} — {r.get('collection')})")
-            fig = px.line(df, x="Query", y=["Precision", "Recall"], markers=True)
+            st.subheader(
+                f"Precision@{saved_k} & Recall@{saved_k} per Query "
+                f"({r.get('model')} — {r.get('collection')})"
+            )
+            fig = px.line(
+                df,
+                x="Query",
+                y=[precision_label, recall_label],
+                markers=True,
+            )
             st.plotly_chart(fig, use_container_width=True)
 
             with st.expander("📊 View & Download Raw Data"):
@@ -289,7 +325,7 @@ def page_results():
     c3.markdown("**MAP**")
     c4.markdown("**Std**")
     c5.markdown("**Runs**")
-    c6.markdown("**Time**")
+    c6.markdown("**Avg Time / Run**")
     c7.markdown("**Analysis**")
     c8.markdown("**Action**")
 
@@ -305,7 +341,10 @@ def page_results():
         c3.write(f"{r.get('map_mean', 0):.4f}")
         c4.write(f"{r.get('map_std', 0):.4f}")
         c5.write(str(r.get("runs", "")))
-        c6.write(f"{r.get('elapsed_sec', '')}s")
+        total_time = float(r.get("elapsed_sec", 0) or 0)
+        result_runs = max(int(r.get("runs", 1) or 1), 1)
+        avg_time_per_run = total_time / result_runs
+        c6.write(f"{avg_time_per_run:.2f}s")
 
         # --- VIEW BUTTON ---
         if c7.button("View", key=f"view_{idx}"):
@@ -345,13 +384,20 @@ def page_compare():
     with col_c:
         collection = st.selectbox("Collection", collections)
 
+    st.caption("MAP is always computed over the full ranking; k affects only Precision@k and Recall@k.")
+
     # --- 2. PARAMETERS FORM ---
     with st.form("compare_form"):
         col1, col2 = st.columns(2)
         with col1:
             runs = st.number_input("Number of runs", min_value=1, max_value=5, value=1)
         with col2:
-            k = st.number_input("Cutoff k (0 = all docs)", min_value=0, value=0)
+            k = st.number_input(
+                "Precision / Recall cutoff k",
+                min_value=1,
+                value=10,
+                help="Affects Precision@k and Recall@k only. MAP is computed over the full ranking.",
+            )
             stopwords = st.checkbox("Stopwords", value=True)
 
         # --- Dynamic parameters for ALL selected models ---
@@ -390,7 +436,7 @@ def page_compare():
             "models": selected_models,
             "collection": collection,
             "runs": runs,
-            "k": k if k > 0 else None,
+            "k": int(k),
             "stopwords": stopwords,
             "params": extra_params,
         }
@@ -413,7 +459,10 @@ def page_compare():
 
         # --- MAP comparison bar chart ---
         map_data = {m: r["map_mean"] for m, r in results.items()}
-        time_data = {m: r["elapsed_sec"] for m, r in results.items()}
+        time_data = {
+            m: float(r["elapsed_sec"]) / max(int(r.get("runs", runs)), 1)
+            for m, r in results.items()
+        }
 
         col1, col2 = st.columns(2)
 
@@ -430,11 +479,11 @@ def page_compare():
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
-            st.subheader("Execution Time (sec)")
+            st.subheader("Average Execution Time / Run (sec)")
             fig2 = px.bar(
                 x=list(time_data.keys()),
                 y=list(time_data.values()),
-                labels={"x": "Model", "y": "Seconds"},
+                labels={"x": "Model", "y": "Average seconds / run"},
                 color=list(time_data.keys()),
                 text=[f"{v:.2f}s" for v in time_data.values()],
             )
@@ -442,7 +491,7 @@ def page_compare():
             st.plotly_chart(fig2, use_container_width=True)
 
         # --- Precision per query overlay ---
-        st.subheader("Precision per Query")
+        st.subheader(f"Precision@{k} per Query")
         fig3 = go.Figure()
         for m, r in results.items():
             if r.get("precision"):
@@ -453,7 +502,7 @@ def page_compare():
                     name=m,
                     mode="lines+markers",
                 ))
-        fig3.update_layout(xaxis_title="Query", yaxis_title="Precision")
+        fig3.update_layout(xaxis_title="Query", yaxis_title=f"Precision@{k}")
         st.plotly_chart(fig3, use_container_width=True)
 
         # --- Summary table ---
@@ -464,7 +513,7 @@ def page_compare():
                 "Model": m,
                 "MAP": round(r["map_mean"], 4),
                 "Std": round(r["map_std"], 4),
-                "Time (s)": r["elapsed_sec"],
+                "Avg Time / Run (s)": round(float(r["elapsed_sec"]) / max(int(r.get("runs", runs)), 1), 2),
             })
         st.dataframe(pd.DataFrame(rows), use_container_width=True)
 

@@ -16,7 +16,6 @@ from models.pgsb import PGSB
 from models.pgsbw import PGSBW
 from models.cgsb import ConGSB
 from models.cgsbw import ConGSBWindow
-from models.GIRTE import GIRTEModel
 from models.pylate_colbert import PyLateColBERT
 from models.tfidf_model import TFIDFModel
 from models.sbert import SBERTModel
@@ -31,7 +30,6 @@ REGISTRY = {
     "PGSBW":       PGSBW,
     "CONGSB":      ConGSB,
     "CONGSBW":     ConGSBWindow,
-    "GIRTE":       GIRTEModel,
     "PYLATE":      PyLateColBERT,
     "TFIDF":       TFIDFModel,
     "SBERT": SBERTModel,
