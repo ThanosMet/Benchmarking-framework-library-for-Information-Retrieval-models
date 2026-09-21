@@ -4,8 +4,8 @@ An extensible benchmarking framework for the execution and comparative
 evaluation of heterogeneous **Information Retrieval (IR) models** under
 a common experimental pipeline.
 
-The project was developed as part of my Diploma Thesis at the
-Department of Computer Engineering and Informatics, University of Patras.
+This project was developed as part of my Diploma Thesis at the Department of Computer Engineering and Informatics (CEID), 
+University of Patras.
 
 ## Overview
 
